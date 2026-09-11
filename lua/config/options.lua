@@ -14,6 +14,11 @@ opt.errorbells = false
 opt.showcmd = true
 opt.mouse = "a"
 
+-- Border on every floating window (hover, diagnostics, signature help,
+-- completion menu, etc.) in one setting, instead of configuring each
+-- feature separately.
+vim.o.winborder = "rounded"
+
 -- Line numbers
 opt.relativenumber = true
 opt.number = true
