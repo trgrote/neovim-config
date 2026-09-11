@@ -41,6 +41,14 @@ local function make_intellij_folding(desc)
   vim.cmd("normal! vat=")
 end
 
-vim.keymap.set("v", "<leader>e", function()
+-- A plain Lua-function visual-mode mapping fires its callback *before*
+-- Neovim commits the '<'/'> marks for the just-exited selection, so
+-- make_intellij_folding would read stale (or unset) marks. Route through
+-- a buffer-local command invoked via :<C-U>...<CR> instead - that mode
+-- transition (visual -> cmdline) is what actually commits the marks
+-- before the call runs (same fix as lua/vimwiki/surround.lua's mappings).
+vim.api.nvim_buf_create_user_command(0, "MakeIntellijFolding", function()
   make_intellij_folding(vim.fn.input("Description: "))
-end, { buffer = true })
+end, {})
+
+vim.keymap.set("v", "<leader>e", ":<C-U>MakeIntellijFolding<CR>", { buffer = true })
