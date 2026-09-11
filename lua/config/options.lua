@@ -49,9 +49,9 @@ opt.wildignore = { "*/node_modules/*", "*/vendor/*" }
 -- must be reapplied on every colorscheme change since plugins overwrite it
 vim.api.nvim_create_augroup("SpecialKeyHighlight", { clear = true })
 vim.api.nvim_create_autocmd("ColorScheme", {
-  group = "SpecialKeyHighlight",
-  callback = function()
-    vim.api.nvim_set_hl(0, "SpecialKey", { bg = "NONE" })
-  end,
+	group = "SpecialKeyHighlight",
+	callback = function()
+		vim.api.nvim_set_hl(0, "SpecialKey", { bg = "NONE" })
+	end,
 })
 vim.api.nvim_set_hl(0, "SpecialKey", { bg = "NONE" })

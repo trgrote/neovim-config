@@ -5,17 +5,17 @@ vim.opt_local.spell = true
 -- machinery) - buffer-local user commands require the separate
 -- nvim_buf_create_user_command API instead.
 vim.api.nvim_buf_create_user_command(0, "NewTicket", function(opts)
-  require("vimwiki.tickets").new_ticket(opts.fargs[1], unpack(opts.fargs, 2))
+	require("vimwiki.tickets").new_ticket(opts.fargs[1], unpack(opts.fargs, 2))
 end, { nargs = "+" })
 
 vim.api.nvim_buf_create_user_command(0, "NewJiraTicket", function(opts)
-  require("vimwiki.jira").make_ticket_from_jira(opts.args)
+	require("vimwiki.jira").make_ticket_from_jira(opts.args)
 end, { nargs = 1 })
 
 -- Convert a visually selected block of '- ' unordered list items into a
 -- numbered list.
 vim.api.nvim_buf_create_user_command(0, "ConvertToNumberedList", function(opts)
-  require("vimwiki.lists").convert_to_numbered_list(opts.line1, opts.line2)
+	require("vimwiki.lists").convert_to_numbered_list(opts.line1, opts.line2)
 end, { range = true })
 
 -- Insert a datetime stamp surrounded by ** at the cursor.
@@ -31,10 +31,10 @@ vim.keymap.set("n", "<Leader>date", "a<C-R>=strftime('%F')<CR><Esc>", { buffer =
 require("vimwiki.surround")
 
 local function opfunc_map(lhs, global_name)
-  vim.keymap.set("n", lhs, function()
-    vim.o.operatorfunc = "v:lua." .. global_name
-    return "g@"
-  end, { buffer = true, expr = true, silent = true })
+	vim.keymap.set("n", lhs, function()
+		vim.o.operatorfunc = "v:lua." .. global_name
+		return "g@"
+	end, { buffer = true, expr = true, silent = true })
 end
 
 opfunc_map("<Leader>fb", "__vimwiki_surround_bold") -- e.g. <Leader>fbiw wraps in '**'
@@ -48,26 +48,26 @@ opfunc_map("<Leader>fs", "__vimwiki_surround_strikethrough") -- e.g. <Leader>fsi
 -- original's vnoremap ... :<C-U>call Func('v')<CR> idiom - that mode
 -- transition is what actually commits the marks before the call runs.
 vim.keymap.set(
-  "v",
-  "<Leader>fb",
-  ":<C-U>lua require('vimwiki.surround').surround_bold('v')<CR>",
-  { buffer = true, silent = true }
+	"v",
+	"<Leader>fb",
+	":<C-U>lua require('vimwiki.surround').surround_bold('v')<CR>",
+	{ buffer = true, silent = true }
 )
 vim.keymap.set(
-  "v",
-  "<Leader>fi",
-  ":<C-U>lua require('vimwiki.surround').surround_italic('v')<CR>",
-  { buffer = true, silent = true }
+	"v",
+	"<Leader>fi",
+	":<C-U>lua require('vimwiki.surround').surround_italic('v')<CR>",
+	{ buffer = true, silent = true }
 )
 vim.keymap.set(
-  "v",
-  "<Leader>fs",
-  ":<C-U>lua require('vimwiki.surround').surround_strikethrough('v')<CR>",
-  { buffer = true, silent = true }
+	"v",
+	"<Leader>fs",
+	":<C-U>lua require('vimwiki.surround').surround_strikethrough('v')<CR>",
+	{ buffer = true, silent = true }
 )
 
 vim.api.nvim_create_user_command("CalendarClose", function()
-  vim.cmd("bwipeout! __Calendar")
+	vim.cmd("bwipeout! __Calendar")
 end, {})
 
 vim.opt.foldlevelstart = 2
@@ -80,17 +80,17 @@ vim.opt.foldlevelstart = 2
 -- into one Lua pattern character class) so multi-byte UTF-8 sequences are
 -- matched atomically rather than byte-by-byte.
 vim.api.nvim_create_autocmd("BufWritePre", {
-  group = vim.api.nvim_create_augroup("replacequotesgroup", { clear = true }),
-  pattern = "*.md",
-  callback = function(args)
-    local lines = vim.api.nvim_buf_get_lines(args.buf, 0, -1, false)
-    for i, line in ipairs(lines) do
-      line = line:gsub("‘", "'"):gsub("’", "'")
-      line = line:gsub("“", '"'):gsub("”", '"')
-      line = line:gsub("\194\145", "'"):gsub("\194\146", "'") -- mojibake U+0091/U+0092
-      line = line:gsub("—", "-")
-      lines[i] = line
-    end
-    vim.api.nvim_buf_set_lines(args.buf, 0, -1, false, lines)
-  end,
+	group = vim.api.nvim_create_augroup("replacequotesgroup", { clear = true }),
+	pattern = "*.md",
+	callback = function(args)
+		local lines = vim.api.nvim_buf_get_lines(args.buf, 0, -1, false)
+		for i, line in ipairs(lines) do
+			line = line:gsub("‘", "'"):gsub("’", "'")
+			line = line:gsub("“", '"'):gsub("”", '"')
+			line = line:gsub("\194\145", "'"):gsub("\194\146", "'") -- mojibake U+0091/U+0092
+			line = line:gsub("—", "-")
+			lines[i] = line
+		end
+		vim.api.nvim_buf_set_lines(args.buf, 0, -1, false, lines)
+	end,
 })
