@@ -59,7 +59,7 @@ return {
       dashboard.section.buttons.val = {
         dashboard.button("e", "  New file", ":enew<CR>"),
         dashboard.button("f", "  Find file", ":Telescope find_files<CR>"),
-        dashboard.button("p", "  Load session", ":lua require('util.sessions').prompt_load()<CR>"),
+        dashboard.button("p", "  Load session", ":lua MiniSessions.select('read')<CR>"),
         dashboard.button("q", "  Quit", ":qa<CR>"),
       }
 
