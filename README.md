@@ -131,14 +131,12 @@ Backed by [`rmagatti/auto-session`](https://github.com/rmagatti/auto-session)
 (`lua/plugins/session.lua`), with the Telescope picker it ships
 (`session_lens`) auto-detected since Telescope is already installed.
 
-**It already works with zero commands.** Every directory gets a session
-automatically: `cd`/launch Neovim in a project, work normally, quit -
-that project's session (cwd + open buffers/windows) is saved under the
-hood. Next time you're in that directory, it's restored automatically on
-startup. No naming needed for this part.
+**Fully opt-in - nothing happens automatically.** `auto_save`/
+`auto_restore` are both disabled, so quitting never silently saves a
+session and launching Neovim never silently restores one you didn't
+ask for. Everything below is a deliberate action.
 
-**Create a named session** (useful for a memorable name independent of
-the path, or to explicitly checkpoint one):
+**Create a named session:**
 
 ```vim
 :AutoSession save nvim
