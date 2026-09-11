@@ -46,8 +46,5 @@ map("n", "<Leader>lc", ":lclose<CR>", { silent = true, desc = "Close location li
 -- Insert datetime stamp (useful for notes)
 map("n", "<leader>dt", "\"=strftime('%c')<CR>gp", { desc = "Insert datetime stamp" })
 
--- Session load picker, backed by mini.sessions (lua/plugins/editor.lua)
--- (replaces vim-startify's <Leader>p -> :SLoad<Space>)
-map("n", "<Leader>p", function()
-	MiniSessions.select("read")
-end, { desc = "Load session" })
+-- <Leader>p (session load) removed along with mini.nvim/mini.sessions -
+-- session management is unresolved for now, see README.

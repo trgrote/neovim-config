@@ -161,20 +161,19 @@ were redundant or actively working against either Neovim's own
 these have since been fixed. Documented here so it's clear *why* the
 config no longer matches the original line-for-line in these spots.
 
-- **Session management (`<Leader>p`) now uses `mini.sessions`,** not a
-  hand-rolled wrapper. Neovim doesn't actually have a different *native*
-  session mechanism from Vim - it's still `:mksession`/`:source` under
-  the hood either way - but `mini.nvim` was already installed (for
-  `mini.bracketed`), and its `mini.sessions` module does this job in a
-  more complete, battle-tested way for zero extra dependency cost. See
-  `lua/plugins/editor.lua`. **Use today:** `<Leader>p` opens a session
-  picker (`MiniSessions.select('read')`) instead of a name prompt;
-  sessions still autosave on quit, and loading one still wipes currently
-  open buffers first (both configured via `mini.sessions`' `autowrite`
-  and a `hooks.pre.read` callback). Sessions are stored under
-  `stdpath('data')/session/` (mini.sessions' own default), not the old
-  module's `stdpath('state')/sessions/` - old saved sessions from before
-  this change won't show up automatically.
+- **Session management is currently unresolved - there is no
+  `<Leader>p` mapping at all right now.** This went through two
+  iterations: first a hand-rolled `lua/util/sessions.lua` wrapper around
+  `:mksession`/`:source`, then a switch to `mini.sessions` (part of
+  `mini.nvim`, which was also providing `mini.bracketed` at the time).
+  Both were removed - `mini.bracketed` wasn't actually being used, and
+  rather than keep `mini.nvim` installed just for `mini.sessions` alone
+  while its usefulness was still undecided, the whole plugin was dropped.
+  Neovim itself has no session mechanism beyond `:mksession`/`:source`
+  either way (see the walkthrough on named multi-workspace switching for
+  the options - plain `:mksession`, `rmagatti/auto-session` +
+  `session-lens`, `natecraddock/workspaces.nvim`, or a small custom
+  wrapper) - nothing is wired up until one of those is chosen.
 
 - **The statusline format string was deleted, not overridden.**
   `lualine.nvim` (which replaced vim-airline) takes over
