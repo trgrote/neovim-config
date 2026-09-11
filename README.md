@@ -171,6 +171,42 @@ Other useful commands: `:AutoSession restore <name>` (switch without the
 picker, if you know the name), `:AutoSession delete <name>`,
 `:AutoSession toggle` (pause/resume autosave for the current session).
 
+## Autocomplete
+
+Backed by [`saghen/blink.cmp`](https://github.com/saghen/blink.cmp)
+(`lua/plugins/completion.lua`), sourcing from the attached LSP server,
+file paths, and the current buffer's words.
+
+**It's manual, not automatic.** The menu doesn't pop up while you type -
+`completion.trigger.show_on_keyword`/`show_on_trigger_character` are
+both disabled. You ask for it:
+
+- **`<C-space>`** - opens the menu. The top match is pre-selected
+  automatically (`preselect = true`, blink's default), so you can accept
+  immediately without moving the selection first.
+- **`<Up>` / `<Down>`** - move the selection.
+- **`<C-y>`** - accept whichever item is currently selected.
+- **`<C-e>`** - cancel/dismiss the menu without accepting anything.
+
+**`<CR>` (Enter) does *not* accept a completion** with this keymap
+preset ("default") - it just inserts a newline as usual, menu open or
+not. This trips people up coming from editors where Enter accepts. If
+you'd rather have Enter accept (closer to VSCode), swap
+`keymap = { preset = "default" }` to `preset = "enter"` in
+`lua/plugins/completion.lua` - that preset adds `<CR>` = accept and
+changes nothing else.
+
+Other keys from the same preset: `<C-k>` toggles function-signature
+help; `<C-b>` / `<C-f>` scroll the documentation preview pane; `<Tab>` /
+`<S-Tab>` jump between snippet placeholders *after* accepting a snippet
+completion (not for navigating the menu itself).
+
+Accepting a completion is merged into the same undo block as the rest
+of your insert-mode session (`completion.accept.create_undo_point =
+false`), so a single `u` after leaving insert mode undoes the whole
+insertion, completion included - not just back to the moment you
+accepted it.
+
 ## Wiki data
 
 This repo is only the *config*. The actual wiki content lives separately
