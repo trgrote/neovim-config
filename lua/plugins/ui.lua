@@ -15,6 +15,12 @@ return {
         lualine_y = { "progress" },
         lualine_z = { "location" },
       },
+      -- Buffer list at the top, replacing
+      -- airline#extensions#tabline#enabled = 1.
+      tabline = {
+        lualine_a = { "buffers" },
+        lualine_z = { "tabs" },
+      },
     },
   },
 
