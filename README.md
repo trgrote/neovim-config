@@ -131,10 +131,10 @@ Backed by [`rmagatti/auto-session`](https://github.com/rmagatti/auto-session)
 (`lua/plugins/session.lua`), with the Telescope picker it ships
 (`session_lens`) auto-detected since Telescope is already installed.
 
-**Fully opt-in - nothing happens automatically.** `auto_save`/
-`auto_restore` are both disabled, so quitting never silently saves a
-session and launching Neovim never silently restores one you didn't
-ask for. Everything below is a deliberate action.
+**Fully opt-in until you touch a session.** `auto_save`/`auto_restore`
+are both disabled, so quitting never silently saves a session and
+launching Neovim never silently restores one you didn't ask for.
+Nothing happens until you explicitly save or restore one - see below.
 
 **Create a named session:**
 
@@ -145,6 +145,13 @@ ask for. Everything below is a deliberate action.
 run from inside `~/.config/nvim` (or whatever directory you want that
 name tied to). `:AutoSession save grumbo` from `~/source/grumbo-web`,
 etc.
+
+**Once you've saved or restored a session, autosave turns on for the
+rest of that run** (but only for that one, not globally) - so further
+changes, like opening another file, get captured automatically on quit
+into that same named session. If you don't want that for a particular
+run, `:AutoSession disable` turns autosave back off until you save or
+restore again.
 
 **Find / switch to another session**, fuzzy-searchable by name or path,
 without restarting Neovim:
