@@ -45,6 +45,11 @@ opt.splitright = true
 
 opt.wildignore = { "*/node_modules/*", "*/vendor/*" }
 
+-- auto-session's recommended setting (lua/plugins/session.lua): adds
+-- winpos/terminal/localoptions on top of Neovim's own default so window
+-- positions and terminal buffers survive a session save/restore too.
+opt.sessionoptions = "blank,buffers,curdir,folds,help,tabpages,winsize,winpos,terminal,localoptions"
+
 -- Disable weird background highlighting that happens for list characters;
 -- must be reapplied on every colorscheme change since plugins overwrite it
 vim.api.nvim_create_augroup("SpecialKeyHighlight", { clear = true })

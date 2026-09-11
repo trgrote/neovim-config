@@ -125,6 +125,47 @@ Get a token from
 these set, `:NewJiraTicket` just prints a reminder and does nothing - the
 rest of the config is unaffected.
 
+## Session management
+
+Backed by [`rmagatti/auto-session`](https://github.com/rmagatti/auto-session)
+(`lua/plugins/session.lua`), with the Telescope picker it ships
+(`session_lens`) auto-detected since Telescope is already installed.
+
+**It already works with zero commands.** Every directory gets a session
+automatically: `cd`/launch Neovim in a project, work normally, quit -
+that project's session (cwd + open buffers/windows) is saved under the
+hood. Next time you're in that directory, it's restored automatically on
+startup. No naming needed for this part.
+
+**Create a named session** (useful for a memorable name independent of
+the path, or to explicitly checkpoint one):
+
+```vim
+:AutoSession save nvim
+```
+
+run from inside `~/.config/nvim` (or whatever directory you want that
+name tied to). `:AutoSession save grumbo` from `~/source/grumbo-web`,
+etc.
+
+**Find / switch to another session**, fuzzy-searchable by name or path,
+without restarting Neovim:
+
+```vim
+:AutoSession search
+```
+
+or press `<Leader>p`. This opens a Telescope picker listing every saved
+session (both auto-named-by-path ones and anything you explicitly
+named) - type to fuzzy-filter, `<CR>` to switch. Switching changes `cwd`
+and swaps in that session's buffers/windows in the same Neovim process.
+From inside the picker: `<C-d>` deletes a session, `<C-s>` swaps to the
+alternate (previous) session, `<C-y>` copies one.
+
+Other useful commands: `:AutoSession restore <name>` (switch without the
+picker, if you know the name), `:AutoSession delete <name>`,
+`:AutoSession toggle` (pause/resume autosave for the current session).
+
 ## Wiki data
 
 This repo is only the *config*. The actual wiki content lives separately
@@ -161,19 +202,14 @@ were redundant or actively working against either Neovim's own
 these have since been fixed. Documented here so it's clear *why* the
 config no longer matches the original line-for-line in these spots.
 
-- **Session management is currently unresolved - there is no
-  `<Leader>p` mapping at all right now.** This went through two
-  iterations: first a hand-rolled `lua/util/sessions.lua` wrapper around
-  `:mksession`/`:source`, then a switch to `mini.sessions` (part of
-  `mini.nvim`, which was also providing `mini.bracketed` at the time).
-  Both were removed - `mini.bracketed` wasn't actually being used, and
-  rather than keep `mini.nvim` installed just for `mini.sessions` alone
-  while its usefulness was still undecided, the whole plugin was dropped.
-  Neovim itself has no session mechanism beyond `:mksession`/`:source`
-  either way (see the walkthrough on named multi-workspace switching for
-  the options - plain `:mksession`, `rmagatti/auto-session` +
-  `session-lens`, `natecraddock/workspaces.nvim`, or a small custom
-  wrapper) - nothing is wired up until one of those is chosen.
+- **Session management went through three iterations before landing on
+  `rmagatti/auto-session`** (`lua/plugins/session.lua`): first a
+  hand-rolled `lua/util/sessions.lua` wrapper around
+  `:mksession`/`:source`, then `mini.sessions` (part of `mini.nvim`,
+  which was also providing an unused `mini.bracketed` at the time - the
+  whole plugin was dropped rather than keep it installed for one
+  undecided module), then this. See the "Session management" section
+  below for how to use it day-to-day.
 
 - **The statusline format string was deleted, not overridden.**
   `lualine.nvim` (which replaced vim-airline) takes over
