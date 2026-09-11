@@ -105,7 +105,7 @@ repo, or a sync tool) when moving to a new machine.
 ```
 init.lua              entry point
 lua/config/            options, keymaps, autocmds, user commands, lazy.nvim bootstrap
-lua/util/               small standalone helpers (buffer close/wipe, :Search)
+lua/util/               small standalone helpers (buffer close/wipe)
 lua/vimwiki/            vimwiki automation: tickets, Jira/ADF, diary, surround, lists
 lua/plugins/             one lazy.nvim spec file per plugin/group
 ftplugin/                per-filetype config (javascript, perl, vimwiki)
