@@ -6,7 +6,17 @@ return {
     { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
   },
   keys = {
-    { "<c-p>", "<cmd>Telescope find_files<CR>", desc = "Find files" },
+    {
+      "<c-p>",
+      function()
+        -- Replaces ctrlp_working_path_mode='ra': search from the nearest
+        -- ancestor directory containing a .git marker, not just Neovim's
+        -- current :pwd. Falls back to :pwd if no marker is found.
+        local root = vim.fs.root(0, { ".git" }) or vim.fn.getcwd()
+        require("telescope.builtin").find_files({ cwd = root })
+      end,
+      desc = "Find files (project root)",
+    },
     { "<leader>fg", "<cmd>Telescope live_grep<CR>", desc = "Live grep" },
     -- Named to avoid any collision with vimwiki's buffer-local <Leader>fb
     -- (bold text-object surround, ftplugin/vimwiki.lua).
