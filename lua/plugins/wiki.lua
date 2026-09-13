@@ -85,12 +85,4 @@ return {
 	},
 
 	{ "trgrote/calendar-vim", cmd = "Calendar" },
-
-	{
-		"vim-perl/vim-perl",
-		ft = "perl",
-		build = "make clean carp dancer highlight-all-pragmas moose test-more try-tiny",
-	},
-
-	{ "PProvost/vim-ps1", ft = "ps1" },
 }
