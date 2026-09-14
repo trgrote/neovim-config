@@ -1,5 +1,22 @@
 local augroup = vim.api.nvim_create_augroup("vimrcEx", { clear = true })
 
+-- Reload a buffer automatically when its file changes on disk (e.g. an
+-- external tool edits it), as long as the buffer has no unsaved changes of
+-- its own. `autoread` only takes effect when something triggers :checktime,
+-- so poke it on the events where an external change is likely to have
+-- happened.
+vim.opt.autoread = true
+
+vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold", "CursorHoldI" }, {
+	group = augroup,
+	desc = "Check for external file changes",
+	callback = function()
+		if vim.fn.mode() ~= "c" then
+			vim.cmd("checktime")
+		end
+	end,
+})
+
 -- For text files, wrap at 78 characters
 vim.api.nvim_create_autocmd("FileType", {
 	group = augroup,
