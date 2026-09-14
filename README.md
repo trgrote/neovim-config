@@ -12,28 +12,13 @@ automation rewritten from scratch in Lua (see `lua/vimwiki/`).
 - **curl** - used by lazy.nvim's bootstrap and by `:NewJiraTicket`.
 - **A C compiler + make**, needed to compile treesitter parsers,
   `telescope-fzf-native`'s native sorter, and `vim-perl`'s supplementary
-  syntax files:
-
-  ```sh
-  sudo apt install build-essential   # Debian/Ubuntu (incl. WSL)
-  ```
-
-  (`base-devel` on Arch, Xcode Command Line Tools on macOS.) Without this
-  the config still loads and works, just without treesitter
-  highlighting/textobjects and with a slower (pure-Lua) telescope sorter.
-
-- **ripgrep** (`rg`), used by Telescope's live grep and file search:
-
-  ```sh
-  sudo apt install ripgrep
-  ```
-
+  syntax files. (`base-devel` on Arch, Xcode Command Line Tools on
+  macOS.) Without this the config still loads and works, just without
+  treesitter highlighting/textobjects and with a slower (pure-Lua)
+  telescope sorter.
+- **ripgrep** (`rg`), used by Telescope's live grep and file search.
 - **node/npm**, needed by Mason to install the npm-based LSP servers
-  (`ts_ls`, `jsonls`, `bashls`):
-
-  ```sh
-  sudo apt install nodejs npm
-  ```
+  (`ts_ls`, `jsonls`, `bashls`).
 
   **On WSL specifically:** if Node.js is only installed on the Windows
   side (e.g. via nvm-windows), `npm` on your WSL `PATH` can resolve to a
@@ -42,17 +27,19 @@ automation rewritten from scratch in Lua (see `lua/vimwiki/`).
   startup with `[mason-lspconfig.nvim] failed to install ...` /
   `npm failed with exit code 127 ... exec: node: not found` (see
   `:MasonLog` for the full error). Fix: install Node.js natively inside
-  WSL with the command above, then restart your shell. Check with
+  WSL with the command below, then restart your shell. Check with
   `which node` / `which npm` afterward - both should resolve under
   `/usr/bin` (or similar), not `/mnt/c/...`.
 
 - **python3** with `pip install sqlparse` - only needed for the
-  `<leader>json` / `<leader>sql` visual-mode formatting mappings:
+  `<leader>json` / `<leader>sql` visual-mode formatting mappings.
 
-  ```sh
-  sudo apt install python3 python3-pip
-  pip install sqlparse
-  ```
+On Debian/Ubuntu (incl. WSL):
+
+```sh
+sudo apt install build-essential ripgrep nodejs npm python3 python3-pip
+pip install sqlparse
+```
 
 None of the above are hard requirements to get *a* working config - only
 to get every feature working. lazy.nvim and the plugin configs degrade
