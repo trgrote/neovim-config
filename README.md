@@ -45,6 +45,60 @@ None of the above are hard requirements to get *a* working config - only
 to get every feature working. lazy.nvim and the plugin configs degrade
 gracefully when a tool is missing.
 
+### Installing on native Windows
+
+Everything above works on native Windows too (not just WSL), but none of
+it ships with Windows and the exact package names/PATH setup differ
+enough from the Unix case to be worth spelling out separately. All
+commands below are PowerShell, and all installs use
+[winget](https://learn.microsoft.com/windows/package-manager/winget/)
+(built into Windows 10 2004+/Windows 11).
+
+#### Quick install: `Install.ps1`
+
+[`Install.ps1`](./Install.ps1) installs Neovim, git, ripgrep, node, a C
+compiler + make (via WinLibs + ezwinports, since Windows has no single
+"build-essential" equivalent and `telescope-fzf-native`'s build step is
+hardcoded to run `make`), and python/sqlparse via winget - skipping
+anything already present, since a fresh machine won't have any of it and
+an existing dev box might have some of it already. It also fixes the
+`sqlformat.exe` PATH gap (`pip install --user` puts it somewhere not on
+`PATH` by default, which silently breaks the `<leader>sql` mapping),
+clones this repo into `%LOCALAPPDATA%\nvim` (Windows' equivalent of
+`~/.config/nvim`) if it isn't already there, and finishes by running
+Neovim headlessly to sync plugins and install the Mason LSP servers.
+It's safe to re-run - every step checks for an existing install first
+and skips it. If something doesn't work, the script itself is the
+documentation - it's short and each step is commented.
+
+If you already have this repo cloned locally, run it from inside the
+clone:
+
+```powershell
+cd "$env:LOCALAPPDATA\nvim"
+.\Install.ps1
+```
+
+On a brand new machine that doesn't have the repo yet, run it straight
+from GitHub - it'll clone the repo itself as one of its steps:
+
+```powershell
+irm https://raw.githubusercontent.com/trgrote/neovim-config/main/Install.ps1 | iex
+```
+
+Pass `-SkipMason` to skip installing the LSP servers (`lua_ls`, `ts_ls`,
+`jsonls`, `bashls`) if you just want the system tools and plugins for
+now, and `-ConfigPath`/`-RepoUrl` to override where it clones to or from.
+**Restart your shell after it finishes** so the PATH changes (Neovim,
+gcc/make, sqlformat) take effect in new sessions - the script updates
+machine/user PATH via the registry, which only new processes pick up.
+
+None of the tools it installs beyond Neovim itself are hard requirements
+to get *a* working config, same caveat as the Unix case above - lazy.nvim
+and the plugin configs degrade gracefully when a tool is missing, just
+with reduced functionality (no treesitter highlighting/textobjects, a
+slower Telescope sorter, some LSP servers unavailable, etc).
+
 ## Install
 
 1. Clone this repo to Neovim's config directory:
