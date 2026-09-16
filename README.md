@@ -45,6 +45,53 @@ None of the above are hard requirements to get *a* working config - only
 to get every feature working. lazy.nvim and the plugin configs degrade
 gracefully when a tool is missing.
 
+### Installing on Debian/Ubuntu
+
+#### Quick install: `install.sh`
+
+[`install.sh`](./install.sh) installs Neovim (via the
+`neovim-ppa/unstable` PPA, since Ubuntu/Debian's own `apt` package is
+often years behind the `>= 0.10` this config requires), git, curl,
+ripgrep, node/npm, a C compiler (`build-essential`), and
+python3/sqlparse via `apt` - skipping anything already present, since a
+fresh machine won't have any of it and an existing dev box might have
+some of it already. It clones this repo into `~/.config/nvim` if it
+isn't already there, and finishes by running Neovim headlessly to sync
+plugins and install the Mason LSP servers. It's safe to re-run - every
+step checks for an existing install first and skips it. If something
+doesn't work, the script itself is the documentation - it's short and
+each step is commented.
+
+If you already have this repo cloned locally, run it from inside the
+clone:
+
+```sh
+cd ~/.config/nvim
+./install.sh
+```
+
+On a brand new machine that doesn't have the repo yet, run it straight
+from GitHub - it'll clone the repo itself as one of its steps:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/trgrote/neovim-config/main/install.sh | bash
+```
+
+Pass `--skip-mason` to skip installing the LSP servers (`lua_ls`,
+`ts_ls`, `jsonls`, `bashls`) if you just want the system tools and
+plugins for now, and set the `CONFIG_PATH`/`REPO_URL` environment
+variables to override where it clones to or from, e.g.:
+
+```sh
+CONFIG_PATH=/tmp/nvim-test ./install.sh
+```
+
+None of the tools it installs beyond Neovim itself are hard requirements
+to get *a* working config, same caveat as above - lazy.nvim and the
+plugin configs degrade gracefully when a tool is missing, just with
+reduced functionality (no treesitter highlighting/textobjects, a slower
+Telescope sorter, some LSP servers unavailable, etc).
+
 ### Installing on native Windows
 
 Everything above works on native Windows too (not just WSL), but none of
