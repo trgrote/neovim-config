@@ -25,14 +25,17 @@ return {
 		-- opening another file) get captured on quit, into that same named
 		-- session (auto-session tracks v:this_session once manually named,
 		-- so this doesn't create a separate cwd-derived session instead).
+		-- Set the flag directly instead of calling disable_auto_save(true),
+		-- which unconditionally vim.notify()'s "Session auto-save enabled"
+		-- every time - there's no config option to silence it.
 		post_save_cmds = {
 			function()
-				require("auto-session").disable_auto_save(true)
+				require("auto-session.config").auto_save = true
 			end,
 		},
 		post_restore_cmds = {
 			function()
-				require("auto-session").disable_auto_save(true)
+				require("auto-session.config").auto_save = true
 			end,
 		},
 	},
