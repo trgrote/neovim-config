@@ -10,6 +10,8 @@
     is older than this config requires, it prompts to upgrade via winget and
     aborts if you decline; if an existing node is too old for Mason's LSP
     servers, it aborts outright (no in-place Node upgrade path via winget).
+    Prompts to install and activate a Nerd Font (JetBrainsMono NF) for
+    terminal icons, skipping the prompt entirely if it's already installed.
     It clones this repo into %LOCALAPPDATA%\nvim if it isn't already there,
     fixes the sqlformat.exe PATH gap, and finishes by running Neovim
     headlessly to bootstrap lazy.nvim, sync plugins, and install the four
@@ -125,6 +127,72 @@ function Install-WingetPackage {
 	}
 }
 
+$NerdFontFamily = "JetBrainsMono NF"
+$NerdFontWingetId = "DEVCOM.JetBrainsMonoNerdFont"
+
+function Test-FontInstalled {
+	param([Parameter(Mandatory)][string]$FamilyName)
+	Add-Type -AssemblyName System.Drawing
+	$installed = (New-Object System.Drawing.Text.InstalledFontCollection).Families.Name
+	return $installed -contains $FamilyName
+}
+
+function Set-WindowsTerminalFont {
+	param([Parameter(Mandatory)][string]$FamilyName)
+
+	$settingsPaths = Get-ChildItem "$env:LOCALAPPDATA\Packages" -Directory -Filter "Microsoft.WindowsTerminal*" -ErrorAction SilentlyContinue |
+		ForEach-Object { Join-Path $_.FullName "LocalState\settings.json" } |
+		Where-Object { Test-Path $_ }
+
+	if (-not $settingsPaths) {
+		Write-Warning "Could not find Windows Terminal's settings.json - set the font yourself (Settings > Defaults > Appearance > Font face > $FamilyName)."
+		return
+	}
+
+	foreach ($path in $settingsPaths) {
+		try {
+			$settings = Get-Content $path -Raw | ConvertFrom-Json
+			if (-not $settings.profiles) {
+				continue
+			}
+			if (-not $settings.profiles.defaults) {
+				$settings.profiles | Add-Member -MemberType NoteProperty -Name defaults -Value ([PSCustomObject]@{})
+			}
+			if (-not $settings.profiles.defaults.font) {
+				$settings.profiles.defaults | Add-Member -MemberType NoteProperty -Name font -Value ([PSCustomObject]@{ face = $FamilyName })
+			} else {
+				$settings.profiles.defaults.font.face = $FamilyName
+			}
+			$settings | ConvertTo-Json -Depth 100 | Set-Content -Path $path -Encoding utf8
+			Write-Step "Set Windows Terminal's default font to $FamilyName ($path)"
+		} catch {
+			Write-Warning "Failed to update Windows Terminal settings at $path - set the font yourself. $_"
+		}
+	}
+}
+
+function Install-NerdFont {
+	if (Test-FontInstalled -FamilyName $NerdFontFamily) {
+		Write-Skip "$NerdFontFamily (already installed)"
+		return
+	}
+
+	$reply = Read-Host "Install and activate '$NerdFontFamily' for terminal icons (nvim-web-devicons, lualine, etc.)? [Y/n]"
+	if ($reply -match '^[Nn]') {
+		Write-Warning "Skipping Nerd Font install - file/git icons in nvim will render as boxes/question marks until a Nerd Font is set as your terminal's font."
+		return
+	}
+
+	Write-Step "Installing $NerdFontFamily ($NerdFontWingetId)"
+	winget install -e --id $NerdFontWingetId --accept-source-agreements --accept-package-agreements
+	if ($LASTEXITCODE -ne 0) {
+		Write-Warning "winget install for $NerdFontWingetId exited with code $LASTEXITCODE - continuing, but check the output above."
+		return
+	}
+
+	Set-WindowsTerminalFont -FamilyName $NerdFontFamily
+}
+
 function Update-SessionPath {
 	$machine = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
 	$user = [System.Environment]::GetEnvironmentVariable("Path", "User")
@@ -179,7 +247,11 @@ Install-WingetPackage -Id "ezwinports.make"                    -CheckCommand "ma
 
 Update-SessionPath
 
-# --- 2. sqlparse + its PATH gotcha -------------------------------------
+# --- 2. Nerd Font (for file/git icons in nvim-web-devicons, lualine, etc.) ---
+
+Install-NerdFont
+
+# --- 3. sqlparse + its PATH gotcha -------------------------------------
 
 Write-Step "Installing sqlparse (for the <leader>sql mapping)"
 python -m pip install --user --quiet sqlparse
@@ -200,7 +272,7 @@ if (Get-Command sqlformat -ErrorAction SilentlyContinue) {
 	}
 }
 
-# --- 3. Clone the config -------------------------------------------------
+# --- 4. Clone the config -------------------------------------------------
 
 $resolvedConfigPath = Resolve-Path -ErrorAction SilentlyContinue $ConfigPath
 $alreadyInPlace = $PSScriptRoot -and $resolvedConfigPath -and ((Resolve-Path $PSScriptRoot).Path -eq $resolvedConfigPath.Path)
@@ -214,7 +286,7 @@ if ($alreadyInPlace) {
 	git clone $RepoUrl $ConfigPath
 }
 
-# --- 4. Bootstrap plugins + LSP servers -----------------------------------
+# --- 5. Bootstrap plugins + LSP servers -----------------------------------
 
 Write-Step "Bootstrapping lazy.nvim and syncing plugins (this compiles treesitter parsers and telescope-fzf-native - may take a minute)"
 nvim --headless "+Lazy! sync" +qa
