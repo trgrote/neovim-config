@@ -29,11 +29,18 @@ function M.insert_ticket_link(ticket_id, description, ticket_link_path)
 	end
 
 	local link = string.format("[%s: %s](%s)", ticket_id, description, ticket_link_path)
-	-- Mirrors the original's `}O...`: jump to the end of the paragraph under
-	-- the heading (the end of the existing link list, or the heading itself
-	-- if the list is empty) and open a new line there.
-	vim.cmd("normal! " .. heading_line .. "G}")
-	local insert_after = vim.api.nvim_win_get_cursor(0)[1]
+	-- Walk forward from the heading through consecutive list items, so the
+	-- new link is inserted right after the last existing one, regardless of
+	-- whether a blank line follows before the next heading.
+	local lines = vim.api.nvim_buf_get_lines(0, heading_line, -1, false)
+	local insert_after = heading_line
+	for _, line in ipairs(lines) do
+		if line:match("^%s*%-%s") then
+			insert_after = insert_after + 1
+		else
+			break
+		end
+	end
 	vim.api.nvim_buf_set_lines(0, insert_after, insert_after, false, { "- " .. link })
 	vim.cmd("write")
 end
