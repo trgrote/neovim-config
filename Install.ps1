@@ -292,8 +292,46 @@ Write-Step "Bootstrapping lazy.nvim and syncing plugins (this compiles treesitte
 nvim --headless "+Lazy! sync" +qa
 
 if (-not $SkipMason) {
-	Write-Step "Installing Mason LSP servers (lua_ls, ts_ls, jsonls, bashls)"
-	nvim --headless -c "MasonInstall lua-language-server typescript-language-server json-lsp bash-language-server" -c "sleep 30000m" -c "qa!"
+	Write-Step "Installing Mason LSP servers (lua_ls, ts_ls, jsonls, bashls) if not already installed"
+	# `:MasonInstall` reinstalls unconditionally even when a package is
+	# already present, which is why a re-run of this script always redownloads
+	# every server. Query mason-registry directly instead and only install
+	# packages that aren't already installed.
+	$masonScript = @'
+local registry = require("mason-registry")
+local names = { "lua-language-server", "typescript-language-server", "json-lsp", "bash-language-server" }
+local pending = 0
+local function finish()
+  pending = pending - 1
+  if pending <= 0 then vim.cmd("qa!") end
+end
+registry.refresh(function()
+  local to_install = {}
+  for _, name in ipairs(names) do
+    local pkg = registry.get_package(name)
+    if pkg:is_installed() then
+      print(name .. " already installed - skipping")
+    else
+      table.insert(to_install, pkg)
+    end
+  end
+  if #to_install == 0 then
+    vim.cmd("qa!")
+    return
+  end
+  pending = #to_install
+  for _, pkg in ipairs(to_install) do
+    pkg:install():once("closed", finish)
+  end
+end)
+'@
+	$masonScriptPath = Join-Path $env:TEMP "mason-install-if-missing.lua"
+	Set-Content -Path $masonScriptPath -Value $masonScript -Encoding utf8
+	# Use a normal headless invocation (not `nvim -l`, which skips loading the
+	# user's config/plugins) so mason-registry is available, then luafile the
+	# script in on top of it.
+	nvim --headless -c "luafile $masonScriptPath" -c "sleep 30000m"
+	Remove-Item -Path $masonScriptPath -ErrorAction SilentlyContinue
 }
 
 Write-Step "Done. Restart your shell so PATH changes take effect, then run 'nvim' and ':checkhealth' to confirm everything's green."
