@@ -18,7 +18,17 @@ return {
 			-- Buffer list at the top, replacing
 			-- airline#extensions#tabline#enabled = 1.
 			tabline = {
-				lualine_a = { "buffers" },
+				lualine_a = {
+					{
+						"buffers",
+						symbols = {
+							alternate_file = "", -- hide the '#' alternate-buffer marker
+						},
+						buffers_color = {
+							inactive = "lualine_c_inactive",
+						},
+					},
+				},
 				lualine_z = { "tabs" },
 			},
 		},
