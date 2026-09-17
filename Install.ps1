@@ -10,8 +10,9 @@
     is older than this config requires, it prompts to upgrade via winget and
     aborts if you decline; if an existing node is too old for Mason's LSP
     servers, it aborts outright (no in-place Node upgrade path via winget).
-    Prompts to install and activate a Nerd Font (JetBrainsMono NF) for
-    terminal icons, skipping the prompt entirely if it's already installed.
+    Installs and activates a Nerd Font (JetBrainsMono NF) for terminal icons,
+    and installs Neovide (a standalone GUI client for this config), skipping
+    each if already installed.
     It clones this repo into %LOCALAPPDATA%\nvim if it isn't already there,
     fixes the sqlformat.exe PATH gap, and finishes by running Neovim
     headlessly to bootstrap lazy.nvim, sync plugins, and install the four
@@ -177,12 +178,6 @@ function Install-NerdFont {
 		return
 	}
 
-	$reply = Read-Host "Install and activate '$NerdFontFamily' for terminal icons (nvim-web-devicons, lualine, etc.)? [Y/n]"
-	if ($reply -match '^[Nn]') {
-		Write-Warning "Skipping Nerd Font install - file/git icons in nvim will render as boxes/question marks until a Nerd Font is set as your terminal's font."
-		return
-	}
-
 	Write-Step "Installing $NerdFontFamily ($NerdFontWingetId)"
 	winget install -e --id $NerdFontWingetId --accept-source-agreements --accept-package-agreements
 	if ($LASTEXITCODE -ne 0) {
@@ -245,14 +240,7 @@ Install-WingetPackage -Id "Python.Python.3.13"                 -CheckCommand "py
 Install-WingetPackage -Id "BrechtSanders.WinLibs.POSIX.UCRT"   -CheckCommand "gcc"   -Label "WinLibs mingw-w64 (gcc)"
 Install-WingetPackage -Id "ezwinports.make"                    -CheckCommand "make"  -Label "GNU make"
 
-if (Get-Command neovide -ErrorAction SilentlyContinue) {
-	Write-Skip "Neovide (already on PATH)"
-} else {
-	$reply = Read-Host "Install Neovide, a standalone GUI client for this config? [y/N]"
-	if ($reply -match '^[Yy]') {
-		Install-WingetPackage -Id "Neovide.Neovide" -CheckCommand "neovide" -Label "Neovide"
-	}
-}
+Install-WingetPackage -Id "Neovide.Neovide" -CheckCommand "neovide" -Label "Neovide"
 
 Update-SessionPath
 
