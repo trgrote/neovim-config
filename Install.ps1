@@ -245,6 +245,15 @@ Install-WingetPackage -Id "Python.Python.3.13"                 -CheckCommand "py
 Install-WingetPackage -Id "BrechtSanders.WinLibs.POSIX.UCRT"   -CheckCommand "gcc"   -Label "WinLibs mingw-w64 (gcc)"
 Install-WingetPackage -Id "ezwinports.make"                    -CheckCommand "make"  -Label "GNU make"
 
+if (Get-Command neovide -ErrorAction SilentlyContinue) {
+	Write-Skip "Neovide (already on PATH)"
+} else {
+	$reply = Read-Host "Install Neovide, a standalone GUI client for this config? [y/N]"
+	if ($reply -match '^[Yy]') {
+		Install-WingetPackage -Id "Neovide.Neovide" -CheckCommand "neovide" -Label "Neovide"
+	}
+}
+
 Update-SessionPath
 
 # --- 2. Nerd Font (for file/git icons in nvim-web-devicons, lualine, etc.) ---
