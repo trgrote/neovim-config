@@ -5,11 +5,15 @@
 .DESCRIPTION
     Installs every tool listed in the README's "Installing on native Windows"
     section via winget (skipping anything already present, since some of
-    these - git, curl, ripgrep, node, python - may already be on the target
-    machine and some may not), clones this repo into %LOCALAPPDATA%\nvim if
-    it isn't already there, fixes the sqlformat.exe PATH gap, and finishes by
-    running Neovim headlessly to bootstrap lazy.nvim, sync plugins, and
-    install the four Mason LSP servers this config enables.
+    these - git, curl, ripgrep, node, tree-sitter CLI, python - may already
+    be on the target machine and some may not). If an existing nvim on PATH
+    is older than this config requires, it prompts to upgrade via winget and
+    aborts if you decline; if an existing node is too old for Mason's LSP
+    servers, it aborts outright (no in-place Node upgrade path via winget).
+    It clones this repo into %LOCALAPPDATA%\nvim if it isn't already there,
+    fixes the sqlformat.exe PATH gap, and finishes by running Neovim
+    headlessly to bootstrap lazy.nvim, sync plugins, and install the four
+    Mason LSP servers this config enables.
 
     Safe to re-run - every step checks for an existing install first.
 
@@ -52,6 +56,53 @@ function Write-Skip($msg) {
 function Test-Winget {
 	if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
 		throw "winget was not found. Install 'App Installer' from the Microsoft Store, then re-run this script."
+	}
+}
+
+$MinNvimVersion = [version]"0.12.0"
+
+function Test-NvimVersion {
+	if (-not (Get-Command nvim -ErrorAction SilentlyContinue)) {
+		return
+	}
+	$firstLine = (nvim --version | Select-Object -First 1)
+	if ($firstLine -match "NVIM v(\d+\.\d+\.\d+)") {
+		$current = [version]$Matches[1]
+		if ($current -lt $MinNvimVersion) {
+			Write-Warning "nvim v$current is on PATH, but this config requires >= v$MinNvimVersion - nvim-treesitter's main branch will fail on older Neovim (attempt to call method 'range' (a nil value))."
+			$reply = Read-Host "Upgrade Neovim now via winget? [y/N]"
+			if ($reply -notmatch '^[Yy]') {
+				throw "Aborting: Neovim must be >= v$MinNvimVersion for this config to work."
+			}
+
+			Write-Step "Upgrading Neovim"
+			winget upgrade -e --id Neovim.Neovim --accept-source-agreements --accept-package-agreements
+			if ($LASTEXITCODE -ne 0) {
+				# winget refuses to "upgrade" a package it doesn't consider
+				# already installed under its own tracking (e.g. a manual
+				# install) - fall back to a plain install in that case.
+				winget install -e --id Neovim.Neovim --accept-source-agreements --accept-package-agreements
+				if ($LASTEXITCODE -ne 0) {
+					throw "winget upgrade/install for Neovim.Neovim failed (exit code $LASTEXITCODE) - upgrade nvim manually to >= v$MinNvimVersion and re-run this script."
+				}
+			}
+			Update-SessionPath
+		}
+	}
+}
+
+$MinNodeVersion = [version]"18.0.0"
+
+function Test-NodeVersion {
+	if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+		return
+	}
+	$raw = (node --version).Trim()
+	if ($raw -match "^v(\d+\.\d+\.\d+)") {
+		$current = [version]$Matches[1]
+		if ($current -lt $MinNodeVersion) {
+			throw "node v$current is on PATH, but this config requires >= v$MinNodeVersion for Mason's LSP servers to run correctly (bash-language-server in particular crashes on startup with 'SyntaxError: Unexpected token .' on older Node). Upgrade Node yourself (e.g. 'winget upgrade OpenJS.NodeJS.LTS', or via nvm-windows) so 'node' on PATH resolves to >= v$MinNodeVersion, then re-run this script."
+		}
 	}
 }
 
@@ -112,9 +163,12 @@ if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
 }
 
 Install-WingetPackage -Id "Neovim.Neovim"                     -CheckCommand "nvim"  -Label "Neovim"
+Test-NvimVersion
 Install-WingetPackage -Id "Git.Git"                            -CheckCommand "git"   -Label "git"
 Install-WingetPackage -Id "BurntSushi.ripgrep.MSVC"            -CheckCommand "rg"    -Label "ripgrep"
 Install-WingetPackage -Id "OpenJS.NodeJS.LTS"                  -CheckCommand "node"  -Label "Node.js"
+Test-NodeVersion
+Install-WingetPackage -Id "tree-sitter.tree-sitter-cli"        -CheckCommand "tree-sitter" -Label "tree-sitter CLI"
 Install-WingetPackage -Id "Python.Python.3.13"                 -CheckCommand "python" -Label "Python 3"
 
 # gcc/make: both required (telescope-fzf-native's build step literally runs

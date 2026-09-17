@@ -7,7 +7,11 @@ automation rewritten from scratch in Lua (see `lua/vimwiki/`).
 
 ## Requirements
 
-- **Neovim >= 0.10** (developed and tested on 0.11.6). Check with `nvim --version`.
+- **Neovim >= 0.12** (developed and tested on 0.12.5). Check with `nvim --version`.
+  `nvim-treesitter`'s `main` branch (see below) relies on core treesitter
+  APIs that don't exist / don't work the same on older Neovim - on
+  anything below 0.12 you'll see `attempt to call method 'range' (a nil
+  value)` errors instead of highlighting.
 - **git** - lazy.nvim clones plugins with it.
 - **curl** - used by lazy.nvim's bootstrap and by `:NewJiraTicket`.
 - **A C compiler + make**, needed to compile treesitter parsers,
@@ -16,9 +20,23 @@ automation rewritten from scratch in Lua (see `lua/vimwiki/`).
   macOS.) Without this the config still loads and works, just without
   treesitter highlighting/textobjects and with a slower (pure-Lua)
   telescope sorter.
+- **The `tree-sitter` CLI**, needed alongside the C compiler above -
+  `nvim-treesitter` is pinned to its `main` branch (`lua/plugins/treesitter.lua`),
+  which compiles parsers via `tree-sitter build` instead of shelling out to
+  the compiler directly like the old branch did. Without it on `PATH`,
+  parser installs fail with `ENOENT: no such file or directory (cmd):
+  'tree-sitter'` and you get the same no-highlighting symptom as missing
+  a C compiler. Install with `npm install -g tree-sitter-cli`, `cargo
+  install tree-sitter-cli`, or a prebuilt binary from
+  <https://github.com/tree-sitter/tree-sitter/releases> if you don't want
+  the npm/cargo global-install path.
 - **ripgrep** (`rg`), used by Telescope's live grep and file search.
-- **node/npm**, needed by Mason to install the npm-based LSP servers
-  (`ts_ls`, `jsonls`, `bashls`).
+- **node/npm >= 18**, needed by Mason to install the npm-based LSP servers
+  (`ts_ls`, `jsonls`, `bashls`). Older Node breaks these at runtime, not
+  install time - `bash-language-server` in particular crash-loops with
+  `SyntaxError: Unexpected token .` on Node < 14 (it uses optional
+  chaining internally), and the install scripts below refuse to continue
+  if `node` on `PATH` is under the minimum.
 
   **On WSL specifically:** if Node.js is only installed on the Windows
   side (e.g. via nvm-windows), `npm` on your WSL `PATH` can resolve to a
@@ -38,6 +56,7 @@ On Debian/Ubuntu (incl. WSL):
 
 ```sh
 sudo apt install build-essential ripgrep nodejs npm python3 python3-pip
+npm install -g tree-sitter-cli
 pip install sqlparse
 ```
 
@@ -51,16 +70,19 @@ gracefully when a tool is missing.
 
 [`install.sh`](./install.sh) installs Neovim (via the
 `neovim-ppa/unstable` PPA, since Ubuntu/Debian's own `apt` package is
-often years behind the `>= 0.10` this config requires), git, curl,
-ripgrep, node/npm, a C compiler (`build-essential`), and
+often years behind the `>= 0.12` this config requires), git, curl,
+ripgrep, node/npm, the `tree-sitter` CLI (via `npm install -g
+tree-sitter-cli`), a C compiler (`build-essential`), and
 python3/sqlparse via `apt` - skipping anything already present, since a
 fresh machine won't have any of it and an existing dev box might have
-some of it already. It clones this repo into `~/.config/nvim` if it
-isn't already there, and finishes by running Neovim headlessly to sync
-plugins and install the Mason LSP servers. It's safe to re-run - every
-step checks for an existing install first and skips it. If something
-doesn't work, the script itself is the documentation - it's short and
-each step is commented.
+some of it already. If `nvim` is already on `PATH` but older than 0.12,
+the script warns you to upgrade rather than silently leaving it in
+place. It clones this repo into `~/.config/nvim` if it isn't already
+there, and finishes by running Neovim headlessly to sync plugins and
+install the Mason LSP servers. It's safe to re-run - every step checks
+for an existing install first and skips it. If something doesn't work,
+the script itself is the documentation - it's short and each step is
+commented.
 
 If you already have this repo cloned locally, run it from inside the
 clone:
@@ -103,20 +125,23 @@ commands below are PowerShell, and all installs use
 
 #### Quick install: `Install.ps1`
 
-[`Install.ps1`](./Install.ps1) installs Neovim, git, ripgrep, node, a C
-compiler + make (via WinLibs + ezwinports, since Windows has no single
-"build-essential" equivalent and `telescope-fzf-native`'s build step is
-hardcoded to run `make`), and python/sqlparse via winget - skipping
-anything already present, since a fresh machine won't have any of it and
-an existing dev box might have some of it already. It also fixes the
-`sqlformat.exe` PATH gap (`pip install --user` puts it somewhere not on
-`PATH` by default, which silently breaks the `<leader>sql` mapping),
-clones this repo into `%LOCALAPPDATA%\nvim` (Windows' equivalent of
-`~/.config/nvim`) if it isn't already there, and finishes by running
-Neovim headlessly to sync plugins and install the Mason LSP servers.
-It's safe to re-run - every step checks for an existing install first
-and skips it. If something doesn't work, the script itself is the
-documentation - it's short and each step is commented.
+[`Install.ps1`](./Install.ps1) installs Neovim, git, ripgrep, node, the
+`tree-sitter` CLI, a C compiler + make (via WinLibs + ezwinports, since
+Windows has no single "build-essential" equivalent and
+`telescope-fzf-native`'s build step is hardcoded to run `make`), and
+python/sqlparse via winget - skipping anything already present, since a
+fresh machine won't have any of it and an existing dev box might have
+some of it already. If `nvim` is already on `PATH` but older than the
+`>= 0.12` this config requires, the script warns you to upgrade rather
+than silently leaving it in place. It also fixes the `sqlformat.exe`
+PATH gap (`pip install --user` puts it somewhere not on `PATH` by
+default, which silently breaks the `<leader>sql` mapping), clones this
+repo into `%LOCALAPPDATA%\nvim` (Windows' equivalent of `~/.config/nvim`)
+if it isn't already there, and finishes by running Neovim headlessly to
+sync plugins and install the Mason LSP servers. It's safe to re-run -
+every step checks for an existing install first and skips it. If
+something doesn't work, the script itself is the documentation - it's
+short and each step is commented.
 
 If you already have this repo cloned locally, run it from inside the
 clone:
