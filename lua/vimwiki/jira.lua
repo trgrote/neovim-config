@@ -86,13 +86,31 @@ function M.build_jira_ticket_lines(key, summary, url, description_lines)
 		end
 	end
 
-	-- glibc strftime uses '%-m' (not Windows/MSVC's '%#m') to suppress
-	-- zero-padding.
+	-- Built manually rather than via strftime flags: glibc uses '%-m' to
+	-- suppress zero-padding while Windows/MSVC uses '%#m', so no single
+	-- format string works on both.
+	local now = os.date("*t")
+	local hour12 = now.hour % 12
+	if hour12 == 0 then
+		hour12 = 12
+	end
+	local ampm = now.hour < 12 and "AM" or "PM"
+	local creation_time = string.format(
+		"%d/%d/%d %d:%02d:%02d %s",
+		now.month,
+		now.day,
+		now.year,
+		hour12,
+		now.min,
+		now.sec,
+		ampm
+	)
+
 	local lines = {
 		string.format("# %s: %s", key, summary),
 		"",
 		"## Description",
-		string.format("- Creation Time: **%s**", os.date("%-m/%-d/%Y %-I:%M:%S %p")),
+		string.format("- Creation Time: **%s**", creation_time),
 		string.format("- %s", url),
 	}
 	if #description_lines > 0 then
