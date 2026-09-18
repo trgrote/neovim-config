@@ -14,7 +14,9 @@ local function index_of(list, value)
 end
 
 function M.get_previous_todos(current_day_filename)
-	local diary_dir = vim.fn.expand(vim.g.calendar_diary)
+	local wiki_path = vim.fn["vimwiki#vars#get_wikilocal"]("path")
+	local diary_rel_path = vim.fn["vimwiki#vars#get_wikilocal"]("diary_rel_path")
+	local diary_dir = vim.fn.expand(wiki_path .. diary_rel_path)
 	local diary_files = vim.fn.readdir(diary_dir, function(name)
 		return name:match("^%d%d%d%d%-%d%d%-%d%d%.md$") ~= nil
 	end)
