@@ -1,0 +1,20 @@
+-- Machine-specific vim.g.vimwiki_list, not tracked in git.
+--
+-- Copy this file to lua/vimwiki/wiki-list.lua (gitignored) on each
+-- machine and adjust it there. lua/plugins/wiki.lua pcall-requires
+-- "vimwiki.wiki-list" and, if present, uses its return value as
+-- vim.g.vimwiki_list. If this file is absent, vim.g.vimwiki_list is left
+-- unset and vimwiki falls back to its own built-in default wiki at
+-- ~/vimwiki/.
+--
+-- Note: this can't live under lua/plugins/ - lazy.nvim auto-imports every
+-- file there as a plugin spec (see lua/config/lazy.lua's `{ import =
+-- "plugins" }`), and a plain returned table isn't a valid one.
+return {
+	{
+		path = "~/vimwiki/mwl/",
+		index = "Home",
+		syntax = "markdown",
+		ext = ".md",
+	},
+}
