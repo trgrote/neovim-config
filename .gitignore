@@ -2,3 +2,6 @@
 *.swo
 *~
 .DS_Store
+
+# Machine-specific vimwiki_list override (see lua/vimwiki/wiki-list.lua.example)
+/lua/vimwiki/wiki-list.lua

@@ -13,14 +13,20 @@ return {
 		branch = "dev",
 		lazy = false,
 		init = function()
-			vim.g.vimwiki_list = {
-				{
-					path = "~/vimwiki/mwl/",
-					index = "Home",
-					syntax = "markdown",
-					ext = ".md",
-				},
-			}
+			-- Machine-specific wiki list, gitignored (see
+			-- lua/vimwiki/wiki-list.lua.example). Falls back to
+			-- vimwiki's own built-in default wiki if absent.
+			local ok, wiki_list = pcall(require, "vimwiki.wiki-list")
+			if not ok then
+				if not wiki_list:find("module 'vimwiki.wiki-list' not found", 1, true) then
+					vim.notify("lua/vimwiki/wiki-list.lua failed to load: " .. wiki_list, vim.log.levels.WARN)
+				end
+			elseif type(wiki_list) ~= "table" then
+				vim.notify("lua/vimwiki/wiki-list.lua must return a table, got " .. type(wiki_list), vim.log.levels.WARN)
+			else
+				vim.g.vimwiki_list = wiki_list
+			end
+
 			vim.g.vimwiki_ext2syntax = {
 				[".md"] = "markdown",
 				[".markdown"] = "markdown",
