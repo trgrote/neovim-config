@@ -23,6 +23,13 @@ vim.keymap.set("n", "<Leader>ts", "i**<C-R>=strftime('%c')<CR>**<Esc>", { buffer
 -- Insert an ISO date at the cursor.
 vim.keymap.set("n", "<Leader>date", "a<C-R>=strftime('%F')<CR><Esc>", { buffer = true, silent = true })
 
+-- Fuzzy-find any file in the current wiki and insert a `[[/relative/path]]`
+-- link at the cursor (see lua/vimwiki/link_picker.lua for why this replaces
+-- i_CTRL-X_CTRL-F for this purpose).
+vim.keymap.set("n", "<Leader>il", function()
+	require("vimwiki.link_picker").insert_link()
+end, { buffer = true, silent = true, desc = "Insert wiki link via Telescope" })
+
 -- Surround a motion/text-object (or visual selection) in a markdown
 -- wrapper, backed by lua/vimwiki/surround.lua. Require it up front (not
 -- just inside the visual-mode mappings below) so its _G globals are
