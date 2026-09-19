@@ -91,13 +91,27 @@ vim.api.nvim_create_autocmd("BufWritePre", {
 	pattern = "*.md",
 	callback = function(args)
 		local lines = vim.api.nvim_buf_get_lines(args.buf, 0, -1, false)
+		local changed = false
 		for i, line in ipairs(lines) do
-			line = line:gsub("‘", "'"):gsub("’", "'")
-			line = line:gsub("“", '"'):gsub("”", '"')
-			line = line:gsub("\194\145", "'"):gsub("\194\146", "'") -- mojibake U+0091/U+0092
-			line = line:gsub("—", "-")
-			lines[i] = line
+			local new_line = line:gsub("‘", "'"):gsub("’", "'")
+			new_line = new_line:gsub("“", '"'):gsub("”", '"')
+			new_line = new_line:gsub("\194\145", "'"):gsub("\194\146", "'") -- mojibake U+0091/U+0092
+			new_line = new_line:gsub("—", "-")
+			if new_line ~= line then
+				lines[i] = new_line
+				changed = true
+			end
 		end
-		vim.api.nvim_buf_set_lines(args.buf, 0, -1, false, lines)
+		-- Only touch the buffer if something actually changed: an
+		-- unconditional nvim_buf_set_lines call here - even with
+		-- byte-identical content - registers a new undo state on every
+		-- save. If that save happens while sitting below the tip of the
+		-- undo tree (e.g. right after `u`), that no-op "edit" forks a new
+		-- branch and orphans the old redo path, so `<C-r>` afterwards
+		-- reports "already at newest change" despite a real change (like
+		-- a link insertion) still existing on the abandoned branch.
+		if changed then
+			vim.api.nvim_buf_set_lines(args.buf, 0, -1, false, lines)
+		end
 	end,
 })
