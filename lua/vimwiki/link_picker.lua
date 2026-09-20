@@ -72,7 +72,9 @@ function M.insert_link()
 					return
 				end
 
-				local link = string.format("[[/%s]]", to_link_path(entry.path or entry[1], root))
+				local link_path = to_link_path(entry.path or entry[1], root)
+				local title = link_path:match("([^/]+)$") or link_path
+				local link = string.format("[[/%s|%s]]", link_path, title)
 				vim.schedule(function()
 					insert_after_cursor(link)
 				end)
