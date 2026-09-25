@@ -29,6 +29,9 @@ return {
 				"node_modules/",
 				"target/",
 				"dist/",
+				-- .NET build output
+				"bin/",
+				"obj/",
 				"%.git/",
 				"%.svn/",
 				"%.swp$",
@@ -37,8 +40,9 @@ return {
 				"%.so$",
 				"%.dll$",
 				"%.meta$",
-				"%.csproj$",
-				"%.sln$",
+				-- .csproj/.sln were ignored back when this config was only used
+				-- for Unity asset trees; they're first-class files now that C#
+				-- development happens here (easy-dotnet edits them directly).
 				"%.manifest$",
 				"%.suo$",
 				"%.pdb$",

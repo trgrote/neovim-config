@@ -17,6 +17,9 @@ local PARSERS = {
 	"markdown",
 	"markdown_inline",
 	"bash",
+	"c_sharp",
+	-- .csproj/.sln/.props are XML; neotest and easy-dotnet also parse them.
+	"xml",
 }
 
 return {
