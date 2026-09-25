@@ -320,6 +320,138 @@ false`), so a single `u` after leaving insert mode undoes the whole
 insertion, completion included - not just back to the moment you
 accepted it.
 
+## C# / .NET
+
+Full .NET development - LSP, debugger, test UI - lives in
+`lua/plugins/dotnet.lua`. Three plugins, each doing one job:
+
+| Plugin | Job |
+| ------ | --- |
+| [`seblyng/roslyn.nvim`](https://github.com/seblyng/roslyn.nvim) | The LSP, and nothing else. Wraps nvim-lspconfig's `roslyn_ls` and adds what lspconfig deliberately won't: finding *every* solution in a tree and letting you switch between them with `:Roslyn target`. |
+| [`GustavEikaas/easy-dotnet.nvim`](https://github.com/GustavEikaas/easy-dotnet.nvim) | `:Dotnet ...` - build, run, watch, test, NuGet packages, solution selection - plus a Rider-style test runner tree and a neotest adapter. |
+| [`mfussenegger/nvim-dap`](https://github.com/mfussenegger/nvim-dap) + `nvim-dap-ui` | Debugging, driven by [netcoredbg](https://github.com/Samsung/netcoredbg). |
+
+**OmniSharp isn't used.** Microsoft's own Roslyn language server (the same
+engine behind Visual Studio and the VS Code C# extension) superseded it,
+and it's what every current Neovim C# setup has moved to.
+
+easy-dotnet ships its own bundled Roslyn support, which is switched off
+here (`lsp = { enabled = false }`) so roslyn.nvim solely owns the LSP -
+running both attaches two C# clients and every diagnostic shows up twice.
+
+### Dependencies: `Install-Dotnet.ps1`
+
+[`Install-Dotnet.ps1`](./Install-Dotnet.ps1) is the .NET counterpart to
+`Install.ps1`. It installs the .NET SDK (winget), the
+`roslyn-language-server` and `EasyDotnet` dotnet global tools,
+`netcoredbg` via Mason, `vscode-langservers-extracted` (npm, the HTML
+half of Razor files), and `dotnet-ef`. Safe to re-run: global tools get
+updated rather than reinstalled, and Mason packages already present are
+left alone.
+
+```powershell
+cd "$env:LOCALAPPDATA\nvim"
+.\Install-Dotnet.ps1
+```
+
+**Run it unelevated.** Every step is per-user - global tools go to
+`%USERPROFILE%\.dotnet\tools`, Mason writes under `%LOCALAPPDATA%`, and
+only your *user* PATH is touched. Running it as admin once the SDK
+exists would put the tools in the Administrator's profile where Neovim
+(unelevated) can't find them, so the script warns and asks before
+continuing. The single exception is installing the SDK itself, which
+winget puts under `C:\Program Files`; if `dotnet` is missing the script
+checks for elevation up front and stops with instructions rather than
+failing halfway through.
+
+`roslyn-language-server` comes from the Azure DevOps `vs-impl` feed, not
+nuget.org - nuget.org only gets occasional drops, far enough behind that
+roslyn.nvim can reject the version as too old.
+
+Flags: `-SkipMason` (skip netcoredbg, i.e. no debugger - useful before
+Neovim's plugins are bootstrapped), `-SkipEf` (skip the Entity Framework
+CLI), `-SdkWingetId` (pin a different SDK major version).
+
+### Keymaps
+
+`<leader>n` for .NET, `<leader>d` for the debugger:
+
+| Key | Does |
+| --- | ---- |
+| `<leader>nb` / `<leader>nB` | build project / solution |
+| `<leader>nr` / `<leader>nR` | run (pick a project) / re-run last picked |
+| `<leader>nd` | debug |
+| `<leader>nw` / `<leader>nx` | watch / clean |
+| `<leader>nt` | easy-dotnet test runner (the tree UI) |
+| `<leader>nS` | neotest summary |
+| `<leader>nc` / `<leader>nf` | run nearest test / all tests in file |
+| `<leader>no` | test output |
+| `<leader>np` / `<leader>nP` | add NuGet package / list outdated |
+| `<leader>ns` / `<leader>nn` | select solution / new project or file |
+| `<F5>` or `<leader>dc` | start/continue debugging |
+| `<F10>` / `<F11>` / `<S-F11>` | step over / into / out |
+| `<leader>dn` / `<leader>di` / `<leader>do` | same three steps, for terminals that swallow `<S-F11>` |
+| `<leader>db` / `<leader>dB` | toggle breakpoint / conditional breakpoint |
+| `<leader>du` / `<leader>dr` | toggle dap-ui / REPL |
+| `<leader>dh` | hover the value under the cursor (also visual mode) |
+| `<leader>dl` / `<leader>dq` | re-run last session / terminate |
+
+The dap-ui panes open and close with the session automatically, so `<F5>`
+is usually all you need.
+
+**`<F5>` doesn't debug tests** - it launches a project, and a test project
+has no entry point. Debug a test from the test runner's `<leader>d`
+instead, which starts the test host with netcoredbg attached.
+
+### Test runner window
+
+These are buffer-local to the runner (`filetype=easy-dotnet`), so they
+don't shadow anything - `<leader>d` is still the debug prefix in a normal
+`.cs` buffer.
+
+| Key | Does |
+| --- | ---- |
+| `o` | toggle expand |
+| `E` / `W` | expand / collapse all children |
+| `]f` / `[f` | next / previous failing test |
+| `<leader>r` | run the node under the cursor (a test, class, or whole project) |
+| `<leader>R` | run every test in the solution |
+| `<leader>d` | debug the node under the cursor |
+| `<leader>p` | peek results |
+| `<leader>g` | go to source |
+| `<leader>e` | show build errors |
+| `<C-r>` | invalidate the node, forcing re-discovery |
+| `<C-c>` | cancel the active operation |
+| `q` or `<Esc>` | close the runner |
+
+### Notes
+
+- **neotest depends on easy-dotnet's runner.** The neotest adapter reads
+  the test runner's discovery state rather than parsing files itself, so
+  until the runner has started there are no tests to show.
+  `test_runner.auto_start_testrunner = true` starts it silently in the
+  background once a solution loads, which is why `<leader>nS` works
+  without visiting `<leader>nt` first. If neotest ever looks empty, open
+  the runner once.
+- **Open a file inside the solution, not the solution file.** Roslyn's
+  root detection walks out from the buffer's path looking for
+  `.sln`/`.slnx`/`.csproj`; `broad_search = true` also lets it walk *down*
+  into subdirectories, so a repo whose solution lives below the cwd still
+  attaches.
+- `.slnx` (the XML solution format that `dotnet new sln` defaults to as
+  of .NET 10) is supported by both roslyn.nvim and easy-dotnet.
+- Telescope no longer ignores `.csproj`/`.sln` - it did, from this
+  config's Unity days - and now ignores `bin/` and `obj/` instead.
+- Health checks: `:checkhealth easy-dotnet` for the .NET side,
+  `:checkhealth lsp` / `:LspInfo` to confirm `roslyn` attached.
+
+### Playground project
+
+`D:\Code\NvimDotnetPlayground` is a scratch solution for exercising all
+of the above - a console app plus an xUnit project with 11 passing tests
+and 1 deliberately skipped one, including `[Theory]` cases so the runner
+tree has child nodes to expand. See its own README.
+
 ## Wiki data
 
 This repo is only the *config*. The actual wiki content lives separately
