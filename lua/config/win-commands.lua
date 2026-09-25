@@ -1,12 +1,12 @@
--- Open Windows File Explorer at the current buffer's file, with the file
--- selected. Windows-only: shells out to explorer.exe, which has no
--- equivalent on other platforms.
-vim.api.nvim_create_user_command("ShowInExplorer", function()
-	if vim.fn.has("win32") ~= 1 then
-		vim.notify("ShowInExplorer is Windows-only", vim.log.levels.ERROR)
-		return
-	end
+-- Windows-only commands - a no-op on other platforms, since these all shell
+-- out to Windows-specific executables with no cross-platform equivalent.
+if vim.fn.has("win32") ~= 1 then
+	return
+end
 
+-- Open Windows File Explorer at the current buffer's file, with the file
+-- selected.
+vim.api.nvim_create_user_command("ShowInExplorer", function()
 	local path = vim.api.nvim_buf_get_name(0)
 	if path == "" then
 		vim.notify("Buffer has no file", vim.log.levels.ERROR)
@@ -19,14 +19,8 @@ vim.api.nvim_create_user_command("ShowInExplorer", function()
 	vim.fn.jobstart(string.format('explorer.exe /select,"%s"', winpath), { detach = true })
 end, {})
 
--- Open a PowerShell instance in the current buffer's directory. Windows-only:
--- shells out to cmd.exe/powershell.exe, which has no equivalent on other platforms.
+-- Open a PowerShell instance in the current buffer's directory.
 vim.api.nvim_create_user_command("OpenInPowershell", function()
-	if vim.fn.has("win32") ~= 1 then
-		vim.notify("OpenInPowershell is Windows-only", vim.log.levels.ERROR)
-		return
-	end
-
 	local path = vim.api.nvim_buf_get_name(0)
 	if path == "" then
 		vim.notify("Buffer has no file", vim.log.levels.ERROR)
