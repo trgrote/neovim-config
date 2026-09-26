@@ -4,6 +4,11 @@ return {
 	event = "InsertEnter",
 	version = "1.*",
 	opts = {
+		-- Only turn blink on for actual code, not prose (markdown/vimwiki
+		-- notes) - no popup at all there, manual trigger included.
+		enabled = function()
+			return vim.bo.filetype ~= "markdown" and vim.bo.filetype ~= "vimwiki"
+		end,
 		completion = {
 			-- Don't force a separate undo point when accepting a (non-snippet)
 			-- completion - keep it merged into the same insert-mode undo
