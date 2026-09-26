@@ -29,8 +29,6 @@ return {
 
 			vim.g.vimwiki_ext2syntax = {
 				[".md"] = "markdown",
-				[".markdown"] = "markdown",
-				[".mdown"] = "markdown",
 			}
 			vim.g.vimwiki_folding = "expr"
 			vim.g.calendar_action_end = "CloseCalendarBuffer"
