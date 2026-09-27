@@ -21,6 +21,20 @@ return {
 		-- Named to avoid any collision with vimwiki's buffer-local <Leader>fb
 		-- (bold text-object surround, ftplugin/vimwiki.lua).
 		{ "<leader>bl", "<cmd>Telescope buffers<CR>", desc = "List buffers" },
+		{
+			"<leader>ms",
+			function()
+				require("util.named-marks").set()
+			end,
+			desc = "Set named mark",
+		},
+		{
+			"<leader>mm",
+			function()
+				require("util.named-marks").picker()
+			end,
+			desc = "Find named mark",
+		},
 	},
 	opts = {
 		defaults = {
