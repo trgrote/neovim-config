@@ -199,18 +199,25 @@ Update-SessionPath
 
 # --- 3. Razor's HTML language server (npm) --------------------------------
 
-if (Get-Command npm -ErrorAction SilentlyContinue) {
-	if (Get-Command vscode-html-language-server -ErrorAction SilentlyContinue) {
-		Write-Skip "vscode-langservers-extracted (vscode-html-language-server on PATH)"
+# Installed with the npm from fnm's "nvim" alias (see lua/config/node.lua):
+# Windows npm puts global packages next to node.exe, so this lands in the
+# directory Neovim already puts on its PATH, independent of whichever Node
+# the shell / project has active.
+$fnmDir = if ($env:FNM_DIR) { $env:FNM_DIR } else { Join-Path $env:APPDATA "fnm" }
+$nvimNodeDir = Join-Path $fnmDir "aliases\nvim"
+
+if (Test-Path "$nvimNodeDir\npm.cmd") {
+	if (Test-Path "$nvimNodeDir\vscode-html-language-server.cmd") {
+		Write-Skip "vscode-langservers-extracted (installed under fnm's 'nvim' Node)"
 	} else {
 		Write-Step "Installing vscode-langservers-extracted (HTML server for Razor files)"
-		npm install -g vscode-langservers-extracted
+		& "$nvimNodeDir\npm.cmd" install -g vscode-langservers-extracted
 		if ($LASTEXITCODE -ne 0) {
 			Write-Warning "npm install -g vscode-langservers-extracted exited with code $LASTEXITCODE - Razor markup completion may not work. C# itself is unaffected."
 		}
 	}
 } else {
-	Write-Warning "npm not found - skipping vscode-langservers-extracted. Razor markup (HTML) completion will be unavailable; run Install.ps1 first to get Node.js."
+	Write-Warning "fnm's 'nvim' Node not found at $nvimNodeDir - skipping vscode-langservers-extracted. Razor markup (HTML) completion will be unavailable; run Install.ps1 first to set it up."
 }
 
 # --- 4. netcoredbg via Mason ----------------------------------------------

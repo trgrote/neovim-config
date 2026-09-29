@@ -5,11 +5,17 @@
 .DESCRIPTION
     Installs every tool listed in the README's "Installing on native Windows"
     section via winget (skipping anything already present, since some of
-    these - git, curl, ripgrep, node, tree-sitter CLI, python - may already
+    these - git, curl, ripgrep, fnm, tree-sitter CLI, python - may already
     be on the target machine and some may not). If an existing nvim on PATH
     is older than this config requires, it prompts to upgrade via winget and
-    aborts if you decline; if an existing node is too old for Mason's LSP
-    servers, it aborts outright (no in-place Node upgrade path via winget).
+    aborts if you decline.
+    Node is managed by fnm rather than a system-wide install: it installs
+    the latest LTS Node and points fnm's "nvim" alias at it (lua/config/node.lua
+    pins Neovim to that alias, so projects needing an older Node don't break
+    Mason's LSP servers), makes it fnm's default if there isn't one yet, and
+    adds fnm's --use-on-cd hook to your PowerShell $PROFILE so projects with
+    an .nvmrc/.node-version switch Node automatically. If the pinned Node is
+    too old for Mason's LSP servers, it aborts.
     Installs and activates a Nerd Font (JetBrainsMono NF) for terminal icons,
     and installs Neovide (a standalone GUI client for this config), skipping
     each if already installed.
@@ -96,17 +102,68 @@ function Test-NvimVersion {
 
 $MinNodeVersion = [version]"18.0.0"
 
-function Test-NodeVersion {
-	if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+function Get-FnmDir {
+	if ($env:FNM_DIR) {
+		return $env:FNM_DIR
+	}
+	return Join-Path $env:APPDATA "fnm"
+}
+
+# The Node that lua/config/node.lua pins Neovim to, regardless of which Node
+# the shell / project has active.
+$NvimNodeDir = Join-Path (Get-FnmDir) "aliases\nvim"
+
+function Install-FnmNode {
+	if (-not (Get-Command fnm -ErrorAction SilentlyContinue)) {
+		Write-Warning "fnm isn't on PATH yet - skipping the pinned Node install. Restart your shell and re-run this script."
 		return
 	}
-	$raw = (node --version).Trim()
+
+	if (Test-Path "$NvimNodeDir\node.exe") {
+		Write-Skip "Neovim's pinned Node (fnm alias 'nvim')"
+	} else {
+		Write-Step "Installing the latest LTS Node via fnm and aliasing it as 'nvim'"
+		fnm install --lts
+		$ltsVersion = (fnm exec --using=lts-latest -- node --version).Trim()
+		fnm alias $ltsVersion nvim
+	}
+
+	if (Test-Path (Join-Path (Get-FnmDir) "aliases\default")) {
+		Write-Skip "fnm default Node"
+	} else {
+		$nvimVersion = (& "$NvimNodeDir\node.exe" --version).Trim()
+		Write-Step "Setting fnm's default Node to $nvimVersion"
+		fnm default $nvimVersion
+	}
+}
+
+function Test-NodeVersion {
+	if (-not (Test-Path "$NvimNodeDir\node.exe")) {
+		return
+	}
+	$raw = (& "$NvimNodeDir\node.exe" --version).Trim()
 	if ($raw -match "^v(\d+\.\d+\.\d+)") {
 		$current = [version]$Matches[1]
 		if ($current -lt $MinNodeVersion) {
-			throw "node v$current is on PATH, but this config requires >= v$MinNodeVersion for Mason's LSP servers to run correctly (bash-language-server in particular crashes on startup with 'SyntaxError: Unexpected token .' on older Node). Upgrade Node yourself (e.g. 'winget upgrade OpenJS.NodeJS.LTS', or via nvm-windows) so 'node' on PATH resolves to >= v$MinNodeVersion, then re-run this script."
+			throw "fnm's 'nvim' alias points at node v$current, but this config requires >= v$MinNodeVersion for Mason's LSP servers to run correctly (bash-language-server in particular crashes on startup with 'SyntaxError: Unexpected token .' on older Node). Re-point it with 'fnm install --lts; fnm alias <version> nvim', then re-run this script."
 		}
 	}
+}
+
+function Add-FnmProfileHook {
+	$hook = "fnm env --use-on-cd --version-file-strategy=recursive --resolve-engines --shell powershell | Out-String | Invoke-Expression"
+
+	if ((Test-Path $PROFILE) -and (Select-String -Path $PROFILE -Pattern "fnm env" -SimpleMatch -Quiet)) {
+		Write-Skip "fnm shell hook (already in $PROFILE)"
+		return
+	}
+
+	Write-Step "Adding fnm's --use-on-cd hook to $PROFILE"
+	$profileDir = Split-Path $PROFILE -Parent
+	if (-not (Test-Path $profileDir)) {
+		New-Item -ItemType Directory -Path $profileDir -Force | Out-Null
+	}
+	Add-Content -Path $PROFILE -Value "`n# Switch Node per directory from .nvmrc/.node-version/package.json engines`n$hook" -Encoding utf8
 }
 
 function Install-WingetPackage {
@@ -229,8 +286,11 @@ Install-WingetPackage -Id "Neovim.Neovim"                     -CheckCommand "nvi
 Test-NvimVersion
 Install-WingetPackage -Id "Git.Git"                            -CheckCommand "git"   -Label "git"
 Install-WingetPackage -Id "BurntSushi.ripgrep.MSVC"            -CheckCommand "rg"    -Label "ripgrep"
-Install-WingetPackage -Id "OpenJS.NodeJS.LTS"                  -CheckCommand "node"  -Label "Node.js"
+Install-WingetPackage -Id "Schniz.fnm"                         -CheckCommand "fnm"   -Label "fnm (Node version manager)"
+Update-SessionPath
+Install-FnmNode
 Test-NodeVersion
+Add-FnmProfileHook
 Install-WingetPackage -Id "tree-sitter.tree-sitter-cli"        -CheckCommand "tree-sitter" -Label "tree-sitter CLI"
 Install-WingetPackage -Id "Python.Python.3.13"                 -CheckCommand "python" -Label "Python 3"
 

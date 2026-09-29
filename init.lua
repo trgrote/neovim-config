@@ -1,6 +1,7 @@
 vim.g.mapleader = " "
 vim.g.maplocalleader = " "
 
+require("config.node")
 require("config.options")
 require("config.keymaps")
 require("config.autocmds")

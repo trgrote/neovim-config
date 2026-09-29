@@ -31,12 +31,31 @@ automation rewritten from scratch in Lua (see `lua/vimwiki/`).
   <https://github.com/tree-sitter/tree-sitter/releases> if you don't want
   the npm/cargo global-install path.
 - **ripgrep** (`rg`), used by Telescope's live grep and file search.
-- **node/npm >= 18**, needed by Mason to install the npm-based LSP servers
-  (`ts_ls`, `jsonls`, `bashls`). Older Node breaks these at runtime, not
-  install time - `bash-language-server` in particular crash-loops with
+- **node/npm >= 18** via [fnm](https://github.com/Schniz/fnm), needed by
+  Mason to install and run the npm-based LSP servers (`ts_ls`, `jsonls`,
+  `bashls`). Older Node breaks these at runtime, not install time -
+  `bash-language-server` in particular crash-loops with
   `SyntaxError: Unexpected token .` on Node < 14 (it uses optional
   chaining internally), and the install scripts below refuse to continue
-  if `node` on `PATH` is under the minimum.
+  if the pinned Node is under the minimum.
+
+  Neovim is pinned to its own Node: [`lua/config/node.lua`](./lua/config/node.lua)
+  puts fnm's `nvim` alias first on Neovim's `PATH` at startup, so every
+  LSP server, formatter, and Mason install uses that Node regardless of
+  which Node the launching shell had active or which directory/session
+  Neovim is in. If the alias doesn't exist it's a no-op and whatever
+  `node` is on `PATH` is used instead. Set it up with
+  `fnm install --lts` then `fnm alias <version> nvim` (re-run the alias
+  command to upgrade later).
+
+  **Per-project Node:** with fnm's `--use-on-cd` shell hook (added by the
+  install scripts), `cd`-ing into a project switches the shell's Node
+  automatically if it has an `.nvmrc`, `.node-version`, or
+  `package.json` `engines.node` (fnm offers to install a missing
+  version). Projects with none of those use `fnm default`'s version. To
+  pin an older project, run `node --version > .nvmrc` from inside it
+  after `fnm use <version>` (add `.nvmrc` to `.git/info/exclude` if you
+  don't want to commit it). None of this affects Neovim's pinned Node.
 
   **On WSL specifically:** if Node.js is only installed on the Windows
   side (e.g. via nvm-windows), `npm` on your WSL `PATH` can resolve to a
@@ -44,10 +63,10 @@ automation rewritten from scratch in Lua (see `lua/vimwiki/`).
   actually run from WSL - Mason installs then fail on every Neovim
   startup with `[mason-lspconfig.nvim] failed to install ...` /
   `npm failed with exit code 127 ... exec: node: not found` (see
-  `:MasonLog` for the full error). Fix: install Node.js natively inside
-  WSL with the command below, then restart your shell. Check with
-  `which node` / `which npm` afterward - both should resolve under
-  `/usr/bin` (or similar), not `/mnt/c/...`.
+  `:MasonLog` for the full error). Fix: install fnm and Node natively
+  inside WSL with the commands below, then restart your shell. Check
+  with `which node` / `which npm` afterward - neither should resolve
+  under `/mnt/c/...`.
 
 - **python3** with `pip install sqlparse` - only needed for the
   `<leader>json` / `<leader>sql` visual-mode formatting mappings.
@@ -55,8 +74,12 @@ automation rewritten from scratch in Lua (see `lua/vimwiki/`).
 On Debian/Ubuntu (incl. WSL):
 
 ```sh
-sudo apt install build-essential ripgrep nodejs npm python3 python3-pip
-npm install -g tree-sitter-cli
+sudo apt install build-essential curl unzip ripgrep python3 python3-pip
+curl -fsSL https://fnm.vercel.app/install | bash   # then restart your shell
+fnm install --lts && fnm alias "$(fnm exec --using=lts-latest -- node --version)" nvim
+# tree-sitter CLI from its release binary (use -arm64 on ARM)
+curl -fsSL https://github.com/tree-sitter/tree-sitter/releases/latest/download/tree-sitter-linux-x64.gz \
+  | gunzip > ~/.local/bin/tree-sitter && chmod +x ~/.local/bin/tree-sitter
 pip install sqlparse
 ```
 
@@ -71,9 +94,11 @@ gracefully when a tool is missing.
 [`install.sh`](./install.sh) installs Neovim (via the
 `neovim-ppa/unstable` PPA, since Ubuntu/Debian's own `apt` package is
 often years behind the `>= 0.12` this config requires), git, curl,
-ripgrep, node/npm, the `tree-sitter` CLI (via `npm install -g
-tree-sitter-cli`), a C compiler (`build-essential`), and
-python3/sqlparse via `apt` - skipping anything already present, since a
+ripgrep, a C compiler (`build-essential`), and python3/sqlparse via
+`apt`; fnm plus an LTS Node aliased as `nvim` (and set as fnm's default
+if there isn't one), with fnm's `--use-on-cd` hook added to
+`~/.bashrc`; and the `tree-sitter` CLI from its GitHub release binary
+into `~/.local/bin` - skipping anything already present, since a
 fresh machine won't have any of it and an existing dev box might have
 some of it already. If `nvim` is already on `PATH` but older than 0.12,
 the script warns you to upgrade rather than silently leaving it in
@@ -125,7 +150,9 @@ commands below are PowerShell, and all installs use
 
 #### Quick install: `Install.ps1`
 
-[`Install.ps1`](./Install.ps1) installs Neovim, git, ripgrep, node, the
+[`Install.ps1`](./Install.ps1) installs Neovim, git, ripgrep, fnm (plus
+an LTS Node aliased as `nvim`, set as fnm's default if there isn't one,
+and fnm's `--use-on-cd` hook added to your PowerShell `$PROFILE`), the
 `tree-sitter` CLI, a C compiler + make (via WinLibs + ezwinports, since
 Windows has no single "build-essential" equivalent and
 `telescope-fzf-native`'s build step is hardcoded to run `make`), and

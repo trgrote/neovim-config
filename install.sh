@@ -4,10 +4,18 @@
 #
 # Installs every tool listed in the README's "Requirements" section via apt
 # (skipping anything already present, since some of these - git, curl,
-# ripgrep, node, python - may already be on the target machine and some may
+# ripgrep, python - may already be on the target machine and some may
 # not), clones this repo into ~/.config/nvim if it isn't already there, and
 # finishes by running Neovim headlessly to bootstrap lazy.nvim, sync
 # plugins, and install the four Mason LSP servers this config enables.
+#
+# Node is managed by fnm rather than apt: it installs the latest LTS Node and
+# points fnm's "nvim" alias at it (lua/config/node.lua pins Neovim to that
+# alias, so projects needing an older Node don't break Mason's LSP servers),
+# makes it fnm's default if there isn't one yet, and adds fnm's --use-on-cd
+# hook to ~/.bashrc so projects with an .nvmrc/.node-version switch Node
+# automatically. The tree-sitter CLI comes from its GitHub release binary
+# rather than npm, so it isn't tied to whichever fnm Node is active.
 #
 # Safe to re-run - every step checks for an existing install first.
 #
@@ -52,9 +60,14 @@ nvim_version() {
 	nvim --version | head -1 | sed -E 's/^NVIM v([0-9]+\.[0-9]+\.[0-9]+).*/\1/'
 }
 
-# Prints node's version without the leading "v" (e.g. "v18.0.0" -> "18.0.0").
+FNM_DIR="${FNM_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/fnm}"
+# The Node that lua/config/node.lua pins Neovim to, regardless of which Node
+# the shell / project has active.
+NVIM_NODE="$FNM_DIR/aliases/nvim/bin/node"
+
+# Prints the pinned Node's version without the leading "v" (e.g. "v18.0.0" -> "18.0.0").
 node_version() {
-	node --version | sed -E 's/^v//'
+	"$NVIM_NODE" --version | sed -E 's/^v//'
 }
 
 # Returns success if $1 >= $2 (both "major.minor.patch" version strings).
@@ -105,29 +118,85 @@ else
 	install_neovim_ppa
 fi
 
-step "Installing system packages (build-essential, git, curl, ripgrep, node/npm, python3)"
+step "Installing system packages (build-essential, git, curl, unzip, ripgrep, python3)"
 sudo apt-get update -y
-sudo apt-get install -y build-essential git curl ripgrep nodejs npm python3 python3-pip
+sudo apt-get install -y build-essential git curl unzip ripgrep python3 python3-pip
 
-# Ubuntu/Debian's apt repos often ship a Node version well below what Mason's
-# LSP servers need - bash-language-server in particular crashes on startup
-# with "SyntaxError: Unexpected token ." (optional chaining) on Node < 14,
-# and other servers may need newer still. Abort rather than silently
-# installing LSP servers that will crash-loop.
+# --- 2. fnm + Neovim's pinned Node ---------------------------------------
+
+if command -v fnm >/dev/null 2>&1 || [ -x "$FNM_DIR/fnm" ]; then
+	skip "fnm"
+else
+	step "Installing fnm (Node version manager)"
+	curl -fsSL https://fnm.vercel.app/install | bash -s -- --install-dir "$FNM_DIR" --skip-shell
+fi
+export PATH="$FNM_DIR:$PATH"
+
+if [ -x "$NVIM_NODE" ]; then
+	skip "Neovim's pinned Node (fnm alias 'nvim')"
+else
+	step "Installing the latest LTS Node via fnm and aliasing it as 'nvim'"
+	fnm install --lts
+	lts_version="$(fnm exec --using=lts-latest -- node --version)"
+	fnm alias "$lts_version" nvim
+fi
+
+if [ -e "$FNM_DIR/aliases/default" ]; then
+	skip "fnm default Node"
+else
+	nvim_node_version="$("$NVIM_NODE" --version)"
+	step "Setting fnm's default Node to $nvim_node_version"
+	fnm default "$nvim_node_version"
+fi
+
+# Mason's LSP servers crash on old Node - bash-language-server in particular
+# crashes on startup with "SyntaxError: Unexpected token ." (optional
+# chaining) on Node < 14, and other servers may need newer still. Abort
+# rather than silently installing LSP servers that will crash-loop.
 current_node_version="$(node_version)"
 if ! version_ge "$current_node_version" "$MIN_NODE_VERSION"; then
-	echo "Error: node v$current_node_version is on PATH (likely from apt's own package), but this config requires >= v$MIN_NODE_VERSION for Mason's LSP servers to run correctly. Install a newer Node yourself (e.g. via nvm, or the NodeSource repo: https://github.com/nodesource/distributions) so that 'node' on PATH resolves to >= v$MIN_NODE_VERSION, then re-run this script." >&2
+	echo "Error: fnm's 'nvim' alias points at node v$current_node_version, but this config requires >= v$MIN_NODE_VERSION for Mason's LSP servers to run correctly. Re-point it with 'fnm install --lts && fnm alias <version> nvim', then re-run this script." >&2
 	exit 1
 fi
+
+if grep -qs 'fnm env' "$HOME/.bashrc"; then
+	skip "fnm shell hook (already in ~/.bashrc)"
+else
+	step "Adding fnm's --use-on-cd hook to ~/.bashrc"
+	cat >>"$HOME/.bashrc" <<EOF
+
+# Switch Node per directory from .nvmrc/.node-version/package.json engines
+export PATH="$FNM_DIR:\$PATH"
+eval "\$(fnm env --use-on-cd --version-file-strategy=recursive --resolve-engines --shell bash)"
+EOF
+fi
+
+# --- 3. tree-sitter CLI ----------------------------------------------------
 
 if command -v tree-sitter >/dev/null 2>&1; then
 	skip "tree-sitter CLI (already on PATH)"
 else
 	step "Installing the tree-sitter CLI (needed by nvim-treesitter's main branch to build parsers)"
-	sudo npm install -g tree-sitter-cli
+	case "$(uname -m)" in
+		x86_64) ts_arch="x64" ;;
+		aarch64 | arm64) ts_arch="arm64" ;;
+		*)
+			echo "Unsupported architecture $(uname -m) for the tree-sitter release binary - install it yourself (e.g. 'cargo install tree-sitter-cli')." >&2
+			ts_arch=""
+			;;
+	esac
+	if [ -n "$ts_arch" ]; then
+		mkdir -p "$HOME/.local/bin"
+		curl -fsSL "https://github.com/tree-sitter/tree-sitter/releases/latest/download/tree-sitter-linux-$ts_arch.gz" |
+			gunzip >"$HOME/.local/bin/tree-sitter"
+		chmod +x "$HOME/.local/bin/tree-sitter"
+		if ! command -v tree-sitter >/dev/null 2>&1; then
+			echo "Installed tree-sitter to ~/.local/bin but it isn't on PATH yet - make sure ~/.local/bin is in your PATH (add 'export PATH=\"\$HOME/.local/bin:\$PATH\"' to your shell rc file), then restart your shell." >&2
+		fi
+	fi
 fi
 
-# --- 2. sqlparse ---------------------------------------------------------
+# --- 4. sqlparse ---------------------------------------------------------
 
 if command -v sqlformat >/dev/null 2>&1; then
 	skip "sqlformat (already on PATH)"
@@ -139,7 +208,7 @@ else
 	fi
 fi
 
-# --- 3. Clone the config -------------------------------------------------
+# --- 5. Clone the config -------------------------------------------------
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" >/dev/null 2>&1 && pwd)"
 
@@ -152,7 +221,7 @@ else
 	git clone "$REPO_URL" "$CONFIG_PATH"
 fi
 
-# --- 4. Bootstrap plugins + LSP servers -----------------------------------
+# --- 6. Bootstrap plugins + LSP servers -----------------------------------
 
 step "Bootstrapping lazy.nvim and syncing plugins (this compiles treesitter parsers and telescope-fzf-native - may take a minute)"
 nvim --headless "+Lazy! sync" +qa
