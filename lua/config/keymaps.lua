@@ -38,6 +38,11 @@ map("n", "<Leader>bka", function()
 end, { silent = true, desc = "Wipe buffers after current" })
 
 -- Insert an 80-char '#' header line, e.g. for note section breaks
+-- Toggle a method chain between one line and one call per line (treesitter)
+map("n", "<Leader>A", function()
+	require("util.chain").toggle()
+end, { silent = true, desc = "Toggle method chain wrap" })
+
 map("n", "<Leader>3", "080i#<Esc>a<CR># ", { desc = "Insert header line" })
 
 map("n", "<Leader>lo", ":lopen<CR>", { silent = true, desc = "Open location list" })
