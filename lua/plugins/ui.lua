@@ -12,7 +12,7 @@ return {
 				lualine_b = { "branch" },
 				lualine_c = { { "filename", path = 1 } },
 				lualine_x = { "fileformat", "filetype" },
-				lualine_y = { "progress" },
+				lualine_y = {},
 				lualine_z = { "location" },
 			},
 			-- Buffer list at the top, replacing
