@@ -7,7 +7,7 @@ return {
 	},
 	keys = {
 		{
-			"<c-p>",
+			"<leader>ff",
 			function()
 				-- Replaces ctrlp_working_path_mode='ra': search from the nearest
 				-- ancestor directory containing a .git marker, not just Neovim's
