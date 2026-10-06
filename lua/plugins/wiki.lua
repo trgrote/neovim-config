@@ -32,6 +32,12 @@ return {
 			}
 			vim.g.vimwiki_folding = "expr"
 			vim.g.calendar_action_end = "CloseCalendarBuffer"
+
+			-- Vimwiki skips a default global mapping when its lhs is already
+			-- mapped, so mapping these to <Nop> turns them off.
+			vim.keymap.set("n", "<Leader>ww", "<Nop>")
+			vim.keymap.set("n", "<Leader>w<Leader>w", "<Nop>")
+			vim.keymap.set("n", "<Leader>wt", "<Nop>")
 		end,
 		config = function()
 			-- calendar-vim (a vimscript plugin) calls this by name via
@@ -42,7 +48,13 @@ return {
 				endfunction
 			]])
 
-			local wiki_augroup = vim.api.nvim_create_augroup("wiki_templates", { clear = true })
+			-- Replaces <Leader>w<Leader>w: open today's diary entry. An
+			-- optional count picks the wiki (e.g. :2Diary).
+			vim.api.nvim_create_user_command("Diary", function(opts)
+				vim.cmd(opts.count .. "VimwikiMakeDiaryNote")
+			end, { count = 0, desc = "Open today's diary entry" })
+
+			local wiki_augroup =vim.api.nvim_create_augroup("wiki_templates", { clear = true })
 
 			-- Populate any newly created *.md file from the wiki page skeleton.
 			vim.api.nvim_create_autocmd("BufNewFile", {
