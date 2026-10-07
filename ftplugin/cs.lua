@@ -6,5 +6,6 @@
 -- has attached and loaded the solution.
 vim.opt_local.foldmethod = "expr"
 vim.opt_local.foldexpr = "v:lua.vim.lsp.foldexpr()"
--- Keep the class body open; regions and members inside it start closed.
-vim.opt_local.foldlevel = 1
+-- Start with everything unfolded so jumping to a line (e.g. from a grep)
+-- never lands inside a closed fold. Use zM / zm to fold on demand.
+vim.opt_local.foldlevel = 99
