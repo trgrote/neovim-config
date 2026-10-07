@@ -13,7 +13,7 @@ return {
 				-- ancestor directory containing a .git marker, not just Neovim's
 				-- current :pwd. Falls back to :pwd if no marker is found.
 				local root = vim.fs.root(0, { ".git" }) or vim.fn.getcwd()
-				require("telescope.builtin").find_files({ cwd = root })
+				require("telescope.builtin").find_files({ cwd = root, previewer = false })
 			end,
 			desc = "Find files (project root)",
 		},
