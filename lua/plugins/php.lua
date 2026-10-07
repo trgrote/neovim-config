@@ -23,18 +23,10 @@ local function registerPhpDebugging()
 		args = { getPhpDebugAdapterPath() },
 	}
 
+	-- Project-specific configs (e.g. Docker path mappings) belong in the
+	-- project's .vscode/launch.json, which nvim-dap reads on demand from cwd.
+	-- This is just the fallback for PHP running directly on this machine.
 	dap.configurations.php = {
-		{
-			type = "php",
-			request = "launch",
-			name = "Listen for Xdebug (docker: /var/www/mwl_api)",
-			port = 9003,
-			-- Container path -> host path. Neovide must be started from the
-			-- repo root so cwd is the directory that's bind-mounted.
-			pathMappings = function()
-				return { ["/var/www/mwl_api"] = vim.fn.getcwd() }
-			end,
-		},
 		{
 			type = "php",
 			request = "launch",
