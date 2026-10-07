@@ -17,7 +17,17 @@ return {
 			end,
 			desc = "Find files (project root)",
 		},
-		{ "<leader>fg", "<cmd>Telescope live_grep<CR>", desc = "Live grep" },
+		{
+			"<leader>fg",
+			function()
+				-- Vertical layout puts the preview underneath the results list.
+				require("telescope.builtin").live_grep({
+					layout_strategy = "vertical",
+					layout_config = { preview_height = 0.5, preview_cutoff = 0 },
+				})
+			end,
+			desc = "Live grep",
+		},
 		-- Named to avoid any collision with vimwiki's buffer-local <Leader>fb
 		-- (bold text-object surround, ftplugin/vimwiki.lua).
 		{ "<leader>bl", "<cmd>Telescope buffers previewer=false<CR>", desc = "List buffers" },
