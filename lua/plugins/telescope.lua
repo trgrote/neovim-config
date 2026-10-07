@@ -20,7 +20,7 @@ return {
 		{ "<leader>fg", "<cmd>Telescope live_grep<CR>", desc = "Live grep" },
 		-- Named to avoid any collision with vimwiki's buffer-local <Leader>fb
 		-- (bold text-object surround, ftplugin/vimwiki.lua).
-		{ "<leader>bl", "<cmd>Telescope buffers<CR>", desc = "List buffers" },
+		{ "<leader>bl", "<cmd>Telescope buffers previewer=false<CR>", desc = "List buffers" },
 		{
 			"<leader>ms",
 			function()
