@@ -32,7 +32,7 @@ opt.copyindent = true
 opt.preserveindent = false
 
 opt.list = true
-opt.listchars = { tab = "▸-", trail = "·", nbsp = "␣", extends = "»", precedes = "«" }
+opt.listchars = { tab = "▸—", trail = "·", nbsp = "␣", extends = "»", precedes = "«" }
 
 opt.linebreak = true
 -- Neovim's default formatoptions is "tcqj" - keep its 'j' (strip comment
