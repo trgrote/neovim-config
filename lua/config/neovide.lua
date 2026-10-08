@@ -13,3 +13,7 @@ vim.g.neovide_cursor_animation_length = 0
 vim.g.neovide_cursor_short_animation_length = 0
 vim.g.neovide_cursor_vfx_mode = ""
 vim.g.neovide_progress_bar_enabled = false
+
+-- Neovide has no terminal to translate Shift-Insert into a paste, so map it
+vim.keymap.set({ "i", "c" }, "<S-Insert>", "<C-r>+", { desc = "Paste from system clipboard" })
+vim.keymap.set("t", "<S-Insert>", '<C-\\><C-n>"+pi', { desc = "Paste from system clipboard" })
