@@ -19,8 +19,9 @@ vim.api.nvim_create_user_command("ShowInExplorer", function()
 	vim.fn.jobstart(string.format('explorer.exe /select,"%s"', winpath), { detach = true })
 end, {})
 
--- Open a PowerShell instance in the current buffer's directory.
-vim.api.nvim_create_user_command("OpenInPowershell", function()
+-- Open a PowerShell instance in the current buffer's directory. An optional
+-- argument is run immediately in the new instance (e.g. `:OpenInPowershell claude`).
+vim.api.nvim_create_user_command("OpenInPowershell", function(opts)
 	local path = vim.api.nvim_buf_get_name(0)
 	if path == "" then
 		vim.notify("Buffer has no file", vim.log.levels.ERROR)
@@ -28,5 +29,10 @@ vim.api.nvim_create_user_command("OpenInPowershell", function()
 	end
 
 	local dir = vim.fn.fnamemodify(path, ":h")
-	vim.fn.jobstart({ "cmd.exe", "/c", "start", "powershell.exe" }, { detach = true, cwd = dir })
-end, {})
+	local cmd = { "cmd.exe", "/c", "start", "powershell.exe" }
+	if opts.args ~= "" then
+		-- -NoExit keeps the window open after the command finishes.
+		vim.list_extend(cmd, { "-NoExit", "-Command", opts.args })
+	end
+	vim.fn.jobstart(cmd, { detach = true, cwd = dir })
+end, { nargs = "*" })
