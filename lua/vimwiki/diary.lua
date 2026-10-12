@@ -1,7 +1,5 @@
--- Diary automation: carry forward the previous day's incomplete TODOs into
--- a newly created diary entry, and regenerate the diary index. Full Lua
--- port of s:GetPreviousTODOS/ft#VimWikiHelpers#AppendPreviousTODO/
--- ft#VimWikiHelpers#UpdateDiaryIndex from autoload/ft/VimWikiHelpers.vim.
+-- Diary helpers: collect the previous entry's incomplete TODOs, and
+-- regenerate the diary index.
 local M = {}
 
 local function index_of(list, value)
@@ -13,46 +11,32 @@ local function index_of(list, value)
 	return nil
 end
 
-function M.get_previous_todos(current_day_filename)
-	local wiki_path = vim.fn["vimwiki#vars#get_wikilocal"]("path")
-	local diary_rel_path = vim.fn["vimwiki#vars#get_wikilocal"]("diary_rel_path")
-	local diary_dir = vim.fn.expand(wiki_path .. diary_rel_path)
-	local diary_files = vim.fn.readdir(diary_dir, function(name)
-		return name:match("^%d%d%d%d%-%d%d%-%d%d%.md$") ~= nil
-	end)
+-- Incomplete TODOs from the most recent diary entry dated before
+-- `current_day_path` (a YYYY-MM-DD.md file), found among its sibling
+-- files - so it works wherever the diary lives, without vimwiki's paths.
+function M.get_previous_todos(current_day_path)
+	local diary_dir = vim.fn.fnamemodify(current_day_path, ":h")
+	local current_day_filename = vim.fn.fnamemodify(current_day_path, ":t")
 	local default_return = { "- [ ] " }
 
-	-- Insert the current day's file (which doesn't exist yet) so the list
-	-- can be split between previous days and future days.
-	local appended = vim.deepcopy(diary_files)
-	table.insert(appended, current_day_filename)
-	table.sort(appended)
-
-	-- Dedupe adjacent duplicates (mirrors vim's uniq() on an already-sorted
-	-- list).
-	local deduped = {}
-	for _, v in ipairs(appended) do
-		if deduped[#deduped] ~= v then
-			table.insert(deduped, v)
+	-- ISO dates sort lexically, so the previous entry is the greatest
+	-- sibling name that's less than the current one.
+	local previous_diary = nil
+	for name, type in vim.fs.dir(diary_dir) do
+		if
+			type == "file"
+			and name:match("^%d%d%d%d%-%d%d%-%d%d%.md$")
+			and name < current_day_filename
+			and (not previous_diary or name > previous_diary)
+		then
+			previous_diary = name
 		end
 	end
-	appended = deduped
 
-	local current_idx = index_of(appended, current_day_filename)
-	if not current_idx then
+	if not previous_diary then
 		return default_return
 	end
 
-	local previous_diaries = {}
-	for i = 1, current_idx - 1 do
-		table.insert(previous_diaries, appended[i])
-	end
-
-	if #previous_diaries == 0 then
-		return default_return
-	end
-
-	local previous_diary = previous_diaries[#previous_diaries]
 	local content = vim.fn.readfile(diary_dir .. "/" .. previous_diary)
 
 	local todo_start = index_of(content, "## TODO")
@@ -87,11 +71,6 @@ function M.get_previous_todos(current_day_filename)
 		table.insert(filtered, l)
 	end
 	return filtered
-end
-
-function M.append_previous_todo(file_name)
-	local prev_lines = M.get_previous_todos(file_name)
-	vim.api.nvim_buf_set_lines(0, -1, -1, false, prev_lines)
 end
 
 -- Regenerate the vimwiki diary index (diary.md) so it links the current

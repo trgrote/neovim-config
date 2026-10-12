@@ -1,0 +1,7 @@
+{
+  "rules": [
+    { "pattern": "**/diary/*-*-*.md", "template": "skeleton.diary.md", "post": "diary" },
+    { "pattern": "**/diary/diary.md", "template": false },
+    { "pattern": "**/*.md", "template": "skeleton.md" }
+  ]
+}
