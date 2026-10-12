@@ -59,6 +59,27 @@ vim.api.nvim_create_autocmd("BufNewFile", {
 	end,
 })
 
+-- oil.nvim creates new files directly on disk (no BufNewFile), so fill
+-- them from their template right after oil's actions complete.
+vim.api.nvim_create_autocmd("User", {
+	group = augroup,
+	pattern = "OilActionsPost",
+	desc = "Apply file template to files created in oil",
+	callback = function(args)
+		if args.data.err then
+			return
+		end
+		for _, action in ipairs(args.data.actions) do
+			if action.type == "create" and action.entry_type == "file" then
+				local scheme, path = require("oil.util").parse_url(action.url)
+				if scheme == "oil://" then
+					require("util.templates").fill_file(require("oil.fs").posix_to_os_path(path))
+				end
+			end
+		end
+	end,
+})
+
 vim.api.nvim_create_user_command("Template", function(opts)
 	require("util.templates").apply_by_name(opts.args, opts.bang)
 end, {
