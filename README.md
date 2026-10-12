@@ -491,13 +491,71 @@ repo, or a sync tool) when moving to a new machine.
 ```
 init.lua              entry point
 lua/config/            options, keymaps, autocmds, lazy.nvim bootstrap
-lua/util/               small standalone helpers (buffer close/wipe)
+lua/util/               small standalone helpers (buffer close/wipe, file templates)
 lua/vimwiki/            vimwiki automation: tickets, Jira/ADF, diary, surround, lists
 lua/plugins/             one lazy.nvim spec file per plugin/group
 ftplugin/                per-filetype config (javascript, perl, vimwiki)
-templates/               skeleton.md / skeleton.diary.md used by the ticket/diary commands
+templates/               global file templates, rules.json + hooks.lua (see "File templates" below)
 spell/                   custom spellfile word list
 ```
+
+## File templates
+
+New files are populated by `lua/util/templates.lua`. It runs on
+`BufNewFile`, which covers `:edit` and following a vimwiki link to a new
+page. It also runs after oil.nvim creates a file, because oil writes the
+empty file straight to disk.
+
+Rules come from two `rules.json` files that use the same schema. The
+first matching rule wins:
+
+1. `<cwd>/.templates/rules.json`: local rules for the directory Neovim is
+   running in. Set `"inherit": false` to skip the global rules.
+2. `templates/rules.json` in this config: the global rules.
+
+```json
+// e.g. ~/vimwiki/improv/.templates/rules.json
+{ "rules": [ { "pattern": "Exercises/*.md", "template": "exercise.md" } ] }
+```
+
+- **`pattern`** is a glob. Local globs are matched against the path
+  relative to cwd, so files outside cwd never match local rules. Global
+  globs are matched against the absolute path, so they need a `**/`
+  prefix. On Windows, matching is case-insensitive.
+- **`template`** is a file name. It is looked up in the folder that owns
+  the rule, then in the global `templates/` folder. `false` means the rule
+  matches but the file is left empty.
+- **`vars`** (optional) adds fixed-text placeholders, e.g.
+  `{ "level": "Level 2" }`.
+- **`post`** (optional) is the name of a hook in `hooks.lua`, for example
+  `"diary"`. It runs after the buffer is populated. Files created in oil
+  skip `post` and `{{cursor}}`, because the template is written straight
+  to disk.
+
+Rules files never contain code, so local ones load without a trust
+prompt. All code lives in `templates/hooks.lua`, which is part of this
+config:
+
+```lua
+return {
+	vars = { month = function() return os.date("%B") end }, -- {{month}} in every template
+	post = { diary = function(ctx) ... end },              -- "post": "diary"
+}
+```
+
+Templates can use the placeholders `{{title}}` (filename stem),
+`{{date}}`, `{{datetime}}` and `{{cwd}}`, plus any `hooks.lua` vars and
+rule `vars`. When names clash, rule vars win over `hooks.lua` vars, which
+win over the built-ins. A value containing newlines becomes multiple
+lines; the diary skeleton's `{{previous_todos}}` relies on this. `{{cursor}}`
+marks where the cursor lands. If it follows a multi-line value, the cursor
+lands on that value's last line. The `TITLE`/`START_DATE` tokens in
+`skeleton.md` are not placeholders: `:NewTicket`/`:NewJiraTicket` fill
+those in themselves.
+
+`:Template {name}` applies a template to the current, empty buffer.
+`:Template!` replaces the existing content. Completion lists the local and
+global templates.
 
 ## Known gaps
 
