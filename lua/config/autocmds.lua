@@ -46,3 +46,28 @@ vim.api.nvim_create_autocmd("BufReadPost", {
 		end
 	end,
 })
+
+-- Populate new files from the first matching template rule in
+-- <cwd>/.templates/rules.json, then templates/rules.json in this config (see
+-- lua/util/templates.lua). Registered here, before lazy.nvim loads any
+-- plugins, so it's in place for the very first new file.
+vim.api.nvim_create_autocmd("BufNewFile", {
+	group = augroup,
+	desc = "Apply file template",
+	callback = function(args)
+		require("util.templates").on_new_file(args)
+	end,
+})
+
+vim.api.nvim_create_user_command("Template", function(opts)
+	require("util.templates").apply_by_name(opts.args, opts.bang)
+end, {
+	nargs = 1,
+	bang = true,
+	desc = "Apply a template to the current buffer (! replaces existing content)",
+	complete = function(arg_lead)
+		return vim.tbl_filter(function(name)
+			return vim.startswith(name, arg_lead)
+		end, require("util.templates").template_names())
+	end,
+})
