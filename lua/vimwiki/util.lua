@@ -2,8 +2,6 @@
 -- helper functions at the top of autoload/ft/VimWikiHelpers.vim.
 local M = {}
 
--- Replaces g:vimfiles_dir - this config's own root, used to resolve
--- templates/skeleton.md and templates/skeleton.diary.md.
 function M.config_dir()
 	return vim.fn.stdpath("config")
 end

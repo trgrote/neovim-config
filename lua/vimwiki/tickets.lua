@@ -26,8 +26,8 @@ function M.new_ticket(ticket_id, ...)
 
 	util.insert_ticket_link(ticket_id, description, ticket_link_path)
 
-	-- Creating this new *.md file triggers the wiki_templates BufNewFile
-	-- autocmd (lua/plugins/wiki.lua), which populates it from skeleton.md.
+	-- The new file is expected to arrive populated from skeleton.md, whose
+	-- TITLE/START_DATE tokens are filled in below.
 	vim.cmd("edit ./" .. ticket_file)
 
 	local title = string.format("%s: %s", ticket_id, description)
