@@ -77,7 +77,7 @@ vim.api.nvim_create_user_command("CalendarClose", function()
 	vim.cmd("bwipeout! __Calendar")
 end, {})
 
-vim.opt.foldlevelstart = 2
+vim.opt_local.foldlevel = 2
 
 -- Replace quotes/dashes that Jira sometimes pastes in and that would
 -- otherwise crash the gollum wiki renderer: curly quotes, the mojibake
