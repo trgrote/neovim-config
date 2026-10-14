@@ -38,4 +38,26 @@ function M.wipe_other_buffers()
 	end
 end
 
+-- Wipe out every buffer numbered before the current one, bound to <Leader>bkh.
+-- Buffers with unsaved changes are left alone (no force).
+function M.wipe_preceding_buffers()
+	local cur = vim.api.nvim_get_current_buf()
+	for _, b in ipairs(vim.api.nvim_list_bufs()) do
+		if b < cur then
+			pcall(vim.api.nvim_buf_delete, b, {})
+		end
+	end
+end
+
+-- Wipe out every buffer numbered after the current one, bound to <Leader>bkl.
+-- Buffers with unsaved changes are left alone (no force).
+function M.wipe_following_buffers()
+	local cur = vim.api.nvim_get_current_buf()
+	for _, b in ipairs(vim.api.nvim_list_bufs()) do
+		if b > cur then
+			pcall(vim.api.nvim_buf_delete, b, {})
+		end
+	end
+end
+
 return M

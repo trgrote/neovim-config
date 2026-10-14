@@ -37,6 +37,14 @@ map("n", "<Leader>bka", function()
 	require("util.buffers").wipe_other_buffers()
 end, { silent = true, desc = "Wipe all other buffers" })
 
+map("n", "<Leader>bkh", function()
+	require("util.buffers").wipe_preceding_buffers()
+end, { silent = true, desc = "Wipe buffers before current" })
+
+map("n", "<Leader>bkl", function()
+	require("util.buffers").wipe_following_buffers()
+end, { silent = true, desc = "Wipe buffers after current" })
+
 -- Insert an 80-char '#' header line, e.g. for note section breaks
 -- Toggle a method chain between one line and one call per line (treesitter)
 map("n", "<Leader>A", function()
