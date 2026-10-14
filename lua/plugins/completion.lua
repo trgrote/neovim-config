@@ -15,7 +15,13 @@ return {
 			-- block as the rest of what you typed, so a single `u` after
 			-- leaving insert mode undoes the whole insertion, completion
 			-- included, matching what `.` already redoes as one unit.
-			accept = { create_undo_point = false },
+			accept = {
+				create_undo_point = false,
+				-- Accepting a method just finishes its name; don't insert a
+				-- `()` pair around the cursor. Typing `);<Esc>` by hand is
+				-- less work than escaping to append the `;` afterwards.
+				auto_brackets = { enabled = false },
+			},
 		},
 		keymap = { preset = "default" },
 		sources = {
