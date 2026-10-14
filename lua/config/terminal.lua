@@ -18,10 +18,35 @@ vim.o.scrollback = 100000
 -- goes from Terminal mode to Normal mode.
 vim.keymap.set("t", "<Esc><Esc>", [[<C-\><C-n>]], { desc = "Terminal: leave to Normal mode" })
 
+local termGroup = vim.api.nvim_create_augroup("termConfig", { clear = true })
+
 vim.api.nvim_create_autocmd("TermOpen", {
-	group = vim.api.nvim_create_augroup("termConfig", { clear = true }),
+	group = termGroup,
 	desc = "Start new terminals in Terminal mode",
 	callback = function()
 		vim.cmd.startinsert()
+	end,
+})
+
+-- Gutter numbers are only useful in Normal/Visual mode, where you navigate
+-- with counts. Hide them while typing into the terminal.
+local function setTermNumbers(enabled)
+	vim.wo.number = enabled
+	vim.wo.relativenumber = enabled
+end
+
+vim.api.nvim_create_autocmd("TermEnter", {
+	group = termGroup,
+	desc = "Hide line numbers in Terminal mode",
+	callback = function()
+		setTermNumbers(false)
+	end,
+})
+
+vim.api.nvim_create_autocmd("TermLeave", {
+	group = termGroup,
+	desc = "Show relative line numbers outside Terminal mode",
+	callback = function()
+		setTermNumbers(true)
 	end,
 })
