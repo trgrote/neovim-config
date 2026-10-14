@@ -27,13 +27,13 @@ function M.close_buffer()
 	end
 end
 
--- Wipe out every buffer numbered after the current one (replaces the
--- original's inline `:.+,$bwipeout`, bound to <Leader>bka).
-function M.wipe_after_current()
-	local cur = vim.fn.bufnr("%")
+-- Wipe out every buffer except the current one, bound to <Leader>bka.
+-- Buffers with unsaved changes are left alone (no force).
+function M.wipe_other_buffers()
+	local cur = vim.api.nvim_get_current_buf()
 	for _, b in ipairs(vim.api.nvim_list_bufs()) do
-		if b > cur then
-			pcall(vim.api.nvim_buf_delete, b, { force = true })
+		if b ~= cur then
+			pcall(vim.api.nvim_buf_delete, b, {})
 		end
 	end
 end

@@ -34,8 +34,8 @@ map("n", "<Leader>bd", function()
 end, { silent = true, desc = "Close buffer, keep window" })
 
 map("n", "<Leader>bka", function()
-	require("util.buffers").wipe_after_current()
-end, { silent = true, desc = "Wipe buffers after current" })
+	require("util.buffers").wipe_other_buffers()
+end, { silent = true, desc = "Wipe all other buffers" })
 
 -- Insert an 80-char '#' header line, e.g. for note section breaks
 -- Toggle a method chain between one line and one call per line (treesitter)
