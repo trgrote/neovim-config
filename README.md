@@ -311,6 +311,14 @@ Other useful commands: `:AutoSession restore <name>` (switch without the
 picker, if you know the name), `:AutoSession delete <name>`,
 `:AutoSession toggle` (pause/resume autosave for the current session).
 
+## Terminal
+
+Configured in `lua/config/terminal.lua`. On Windows, `:terminal`, `:!` and
+`system()` use PowerShell (`pwsh` if installed) instead of cmd.exe. New
+terminals start in Terminal mode; `<Esc><Esc>` drops to Normal mode, where the
+scrollback (100000 lines) is a normal buffer. Terminal jobs die when their
+buffer is wiped, including on an auto-session switch.
+
 ## Autocomplete
 
 Backed by [`saghen/blink.cmp`](https://github.com/saghen/blink.cmp)
