@@ -7,6 +7,14 @@ return {
 		config = true,
 	},
 
+	-- Extra text objects: ia/aa (argument), if/af (function), iq/aq (quote), etc.
+	{
+		"echasnovski/mini.ai",
+		version = false,
+		event = "VeryLazy",
+		opts = {},
+	},
+
 	-- Kept as-is: no mature Lua-native alignment plugin replaces it.
 	{
 		"godlygeek/tabular",
