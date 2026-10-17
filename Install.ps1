@@ -20,9 +20,10 @@
     and installs Neovide (a standalone GUI client for this config), skipping
     each if already installed.
     It clones this repo into %LOCALAPPDATA%\nvim if it isn't already there,
-    fixes the sqlformat.exe PATH gap, and finishes by running Neovim
-    headlessly to bootstrap lazy.nvim, sync plugins, and install the four
-    Mason LSP servers this config enables.
+    fixes the sqlformat.exe PATH gap, points the tree-sitter CLI at gcc (CC),
+    and finishes by running Neovim headlessly to bootstrap lazy.nvim, restore
+    plugins from lazy-lock.json, and install the Mason LSP servers listed in
+    mason-lspconfig's ensure_installed (lua/plugins/lsp.lua).
 
     Safe to re-run - every step checks for an existing install first.
 
@@ -34,8 +35,8 @@
     where Neovim looks natively on Windows (the equivalent of ~/.config/nvim).
 
 .PARAMETER SkipMason
-    Skip installing the Mason LSP servers (lua_ls, ts_ls, jsonls, bashls) at
-    the end. Useful if you just want the system tools installed quickly.
+    Skip installing the Mason LSP servers (mason-lspconfig's ensure_installed)
+    at the end. Useful if you just want the system tools installed quickly.
 
 .EXAMPLE
     .\Install.ps1
@@ -265,6 +266,30 @@ function Add-UserPathEntry {
 	Update-SessionPath
 }
 
+# The tree-sitter CLI (which nvim-treesitter's main branch shells out to)
+# defaults to MSVC's cl.exe on Windows and fails every parser with "Error:
+# program not found" when only WinLibs gcc is installed. Point it at gcc via
+# CC, persisted for future shells and set for this one before plugins build.
+function Set-TreesitterCompiler {
+	if (Get-Command cl -ErrorAction SilentlyContinue) {
+		Write-Skip "C compiler for tree-sitter (MSVC cl.exe on PATH)"
+		return
+	}
+	if (-not (Get-Command gcc -ErrorAction SilentlyContinue)) {
+		Write-Warning "gcc isn't on PATH yet - treesitter parsers won't compile. Restart your shell and re-run this script."
+		return
+	}
+	$userCC = [System.Environment]::GetEnvironmentVariable("CC", "User")
+	if ($userCC) {
+		Write-Skip "CC=$userCC (user environment variable)"
+	} else {
+		Write-Step "Setting CC=gcc so the tree-sitter CLI compiles parsers with gcc instead of MSVC"
+		[System.Environment]::SetEnvironmentVariable("CC", "gcc", "User")
+		$userCC = "gcc"
+	}
+	$env:CC = $userCC
+}
+
 # --- 1. System tools ---------------------------------------------------
 
 # Pick up PATH entries from any earlier run of this script in the same
@@ -299,6 +324,8 @@ Install-WingetPackage -Id "Python.Python.3.13"                 -CheckCommand "py
 # separate packages rather than one all-in-one toolchain.
 Install-WingetPackage -Id "BrechtSanders.WinLibs.POSIX.UCRT"   -CheckCommand "gcc"   -Label "WinLibs mingw-w64 (gcc)"
 Install-WingetPackage -Id "ezwinports.make"                    -CheckCommand "make"  -Label "GNU make"
+Update-SessionPath
+Set-TreesitterCompiler
 
 Install-WingetPackage -Id "Neovide.Neovide" -CheckCommand "neovide" -Label "Neovide"
 
@@ -345,50 +372,98 @@ if ($alreadyInPlace) {
 
 # --- 5. Bootstrap plugins + LSP servers -----------------------------------
 
-Write-Step "Bootstrapping lazy.nvim and syncing plugins (this compiles treesitter parsers and telescope-fzf-native - may take a minute)"
-nvim --headless "+Lazy! sync" +qa
+# `restore` (not `sync`) installs every plugin at the commit pinned in
+# lazy-lock.json - `sync` updates them all to latest and leaves the lockfile
+# dirty after every run.
+Write-Step "Bootstrapping lazy.nvim and restoring plugins from lazy-lock.json (this compiles treesitter parsers and telescope-fzf-native - may take a minute)"
+nvim --headless "+Lazy! restore" +qa
 
 if (-not $SkipMason) {
-	Write-Step "Installing Mason LSP servers (lua_ls, ts_ls, jsonls, bashls) if not already installed"
+	Write-Step "Installing Mason LSP servers from mason-lspconfig's ensure_installed (lua/plugins/lsp.lua) if not already installed"
 	# `:MasonInstall` reinstalls unconditionally even when a package is
 	# already present, which is why a re-run of this script always redownloads
 	# every server. Query mason-registry directly instead and only install
-	# packages that aren't already installed.
+	# packages that aren't already installed. mason-lspconfig skips its own
+	# ensure_installed in headless mode, so this does that job instead - the
+	# server list is read from its settings so it can't drift from lsp.lua.
+	#
+	# Every path out of this script must end in :qall/:cquit - headless nvim
+	# otherwise sits in its event loop forever, hanging the install. (The
+	# previous version waited on the install handle's "closed" event, which
+	# mason v2 no longer emits, so it never quit.)
 	$masonScript = @'
-local registry = require("mason-registry")
-local names = { "lua-language-server", "typescript-language-server", "json-lsp", "bash-language-server" }
-local pending = 0
-local function finish()
-  pending = pending - 1
-  if pending <= 0 then vim.cmd("qa!") end
+-- print() output can be lost when nvim quits right after, so write directly.
+local function log(msg)
+  io.stderr:write(msg .. "\n")
 end
-registry.refresh(function()
-  local to_install = {}
-  for _, name in ipairs(names) do
-    local pkg = registry.get_package(name)
-    if pkg:is_installed() then
-      print(name .. " already installed - skipping")
-    else
-      table.insert(to_install, pkg)
+
+local function fail(msg)
+  log("ERROR: " .. msg)
+  vim.cmd("cquit! 1")
+end
+
+vim.defer_fn(function() fail("timed out after 10 minutes") end, 10 * 60 * 1000)
+
+local ok, err = pcall(function()
+  local registry = require("mason-registry")
+  local servers = require("mason-lspconfig.settings").current.ensure_installed
+  local pending, failed = 0, false
+
+  local function maybe_quit()
+    if pending == 0 then
+      if failed then vim.cmd("cquit! 1") else vim.cmd("qall!") end
     end
   end
-  if #to_install == 0 then
-    vim.cmd("qa!")
-    return
-  end
-  pending = #to_install
-  for _, pkg in ipairs(to_install) do
-    pkg:install():once("closed", finish)
-  end
+
+  registry.refresh(function()
+    local ok2, err2 = pcall(function()
+      -- The lspconfig -> Mason package mappings come from the registry
+      -- itself, so they're empty on a fresh machine until refresh() has
+      -- downloaded it - only look them up in here.
+      local to_package = require("mason-lspconfig").get_mappings().lspconfig_to_package
+      for _, server in ipairs(servers) do
+        local name = to_package[server]
+        if not name then
+          log("no Mason package for '" .. server .. "'")
+          failed = true
+        else
+          local pkg = registry.get_package(name)
+          if pkg:is_installed() then
+            log(name .. " already installed - skipping")
+          else
+            log("installing " .. name)
+            pending = pending + 1
+            pkg:install({}, vim.schedule_wrap(function(success, result)
+              if success then
+                log(name .. " installed")
+              else
+                log(name .. " FAILED: " .. vim.inspect(result))
+                failed = true
+              end
+              pending = pending - 1
+              maybe_quit()
+            end))
+          end
+        end
+      end
+    end)
+    if not ok2 then return fail(tostring(err2)) end
+    maybe_quit()
+  end)
 end)
+if not ok then fail(tostring(err)) end
 '@
 	$masonScriptPath = Join-Path $env:TEMP "mason-install-if-missing.lua"
 	Set-Content -Path $masonScriptPath -Value $masonScript -Encoding utf8
 	# Use a normal headless invocation (not `nvim -l`, which skips loading the
 	# user's config/plugins) so mason-registry is available, then luafile the
 	# script in on top of it.
-	nvim --headless -c "luafile $masonScriptPath" -c "sleep 30000m"
+	nvim --headless -c "luafile $masonScriptPath"
+	$masonExit = $LASTEXITCODE
 	Remove-Item -Path $masonScriptPath -ErrorAction SilentlyContinue
+	if ($masonExit -ne 0) {
+		throw "Mason LSP server install failed (exit code $masonExit) - see the output above, or run ':Mason' in nvim to retry."
+	}
 }
 
 Write-Step "Done. Restart your shell so PATH changes take effect, then run 'nvim' and ':checkhealth' to confirm everything's green."
