@@ -139,6 +139,38 @@ plugin configs degrade gracefully when a tool is missing, just with
 reduced functionality (no treesitter highlighting/textobjects, a slower
 Telescope sorter, some LSP servers unavailable, etc).
 
+### Installing on macOS
+
+#### Quick install: `install-mac.sh`
+
+[`install-mac.sh`](./install-mac.sh) installs Homebrew if it's missing
+(which also installs the Xcode Command Line Tools for the C compiler +
+make), then Neovim, git, ripgrep, fnm, and pipx via `brew`; an LTS Node
+aliased as `nvim` (and set as fnm's default if there isn't one), with
+fnm's `--use-on-cd` hook added to `~/.zshrc` (or `~/.bash_profile` if
+your login shell is bash); the `tree-sitter` CLI from its GitHub release
+binary into `~/.local/bin`; and sqlparse via pipx (Homebrew's Python
+rejects `pip install --user`). It pins `FNM_DIR` to
+`~/.local/share/fnm` rather than fnm's macOS default under
+`~/Library/Application Support`, since that's where
+[`lua/config/node.lua`](./lua/config/node.lua) looks for the `nvim`
+alias. Otherwise it behaves like `install.sh`: skips anything already
+present, warns if an older `nvim` is on `PATH`, clones this repo into
+`~/.config/nvim` if needed, syncs plugins and installs the Mason LSP
+servers, and accepts the same `--skip-mason` flag and
+`CONFIG_PATH`/`REPO_URL` environment variables.
+
+```sh
+cd ~/.config/nvim
+./install-mac.sh
+```
+
+Or on a brand new machine:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/trgrote/neovim-config/main/install-mac.sh | bash
+```
+
 ### Installing on native Windows
 
 Everything above works on native Windows too (not just WSL), but none of
